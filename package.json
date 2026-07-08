@@ -1,5 +1,5 @@
 {
-  "name": "dashboard-scaffold",
+  "name": "dashboard",
   "private": true,
   "type": "module",
   "imports": {
@@ -49,11 +49,5 @@
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "^6.0.2",
     "vite": "^8.0.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lightningcss"
-    ]
   }
 }
