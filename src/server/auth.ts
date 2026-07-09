@@ -25,6 +25,8 @@ export async function handleSession(request: Request): Promise<Response> {
 	}
 	const name = typeof username === "string" ? username : "";
 	const response = new Response(null, { status: 204 });
+	// Append Set-Cookie after construction: happy-dom's Response (test
+	// preload) drops headers passed to the constructor.
 	response.headers.append(
 		"Set-Cookie",
 		`piper_session=${encodeURIComponent(credential)}; ${COOKIE_ATTRS}; Max-Age=${SESSION_MAX_AGE}`,
