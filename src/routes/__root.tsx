@@ -1,7 +1,13 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import {
+	createRootRoute,
+	HeadContent,
+	Outlet,
+	Scripts,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import Header from "../components/Header";
+import { getSession } from "../server/fns";
 
 import appCss from "../styles.css?url";
 
@@ -28,8 +34,20 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	loader: () => getSession(),
+	component: RootLayout,
 	shellComponent: RootDocument,
 });
+
+function RootLayout() {
+	const session = Route.useLoaderData();
+	return (
+		<>
+			<Header username={session?.username ?? null} />
+			<Outlet />
+		</>
+	);
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
@@ -40,7 +58,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-				<Header />
 				{children}
 				<TanStackDevtools
 					config={{
