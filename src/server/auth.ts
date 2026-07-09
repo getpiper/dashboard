@@ -10,6 +10,10 @@ export function handleLogin(request: Request, relayBase: string): Response {
 }
 
 export async function handleSession(request: Request): Promise<Response> {
+	const origin = request.headers.get("Origin");
+	if (origin === null || origin !== new URL(request.url).origin) {
+		return new Response("cross-origin request rejected", { status: 403 });
+	}
 	let body: unknown;
 	try {
 		body = await request.json();
