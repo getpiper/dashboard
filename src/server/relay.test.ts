@@ -41,7 +41,7 @@ test("fetchBoxes calls GET {relay}/agents with the bearer credential", async () 
 
 	const boxes = await fetchBoxes("cred-1");
 	expect(seenUrl).toBe("https://relay.test/agents");
-	expect(seenAuth).toBe("Bearer cred-1");
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
 	expect(boxes).toEqual([
 		{ agent: "abc123-zoe.public.example", connected: true },
 		{ agent: "def456-zoe.public.example", connected: false },
@@ -50,12 +50,12 @@ test("fetchBoxes calls GET {relay}/agents with the bearer credential", async () 
 
 test("fetchBoxes throws RelayAuthError on 401", async () => {
 	globalThis.fetch = (async () =>
-		new Response("unauthorized", { status: 401 })) as typeof fetch;
+		new Response("unauthorized", { status: 401 })) as unknown as typeof fetch;
 	expect(fetchBoxes("bad-cred")).rejects.toBeInstanceOf(RelayAuthError);
 });
 
 test("fetchBoxes throws a plain error on other failures", async () => {
 	globalThis.fetch = (async () =>
-		new Response("boom", { status: 502 })) as typeof fetch;
+		new Response("boom", { status: 502 })) as unknown as typeof fetch;
 	expect(fetchBoxes("cred-1")).rejects.toThrow(/502/);
 });
