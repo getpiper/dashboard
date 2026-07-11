@@ -1,8 +1,15 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import type { BoxWithApps } from "@/server/relay";
 import { StatusPill } from "./status-pill";
 
-export function BoxDetail({ box }: { box: BoxWithApps }) {
+export function BoxDetail({
+	box,
+	children,
+}: {
+	box: BoxWithApps;
+	children?: ReactNode;
+}) {
 	return (
 		<main className="page-wrap flex flex-col gap-4 px-4 py-8">
 			<div className="flex items-center gap-2">
@@ -23,6 +30,7 @@ export function BoxDetail({ box }: { box: BoxWithApps }) {
 					New project
 				</Link>
 			</div>
+			{children}
 			{!box.connected ? (
 				<p className="text-muted-foreground">
 					This box is offline — its apps can't be reached.

@@ -355,3 +355,124 @@ export async function deleteApp(
 		throw new Error(msg || `relay delete app returned ${res.status}`);
 	}
 }
+
+export type DnsRecord = { type: string; name: string; value: string };
+
+export type DomainStatus = {
+	domain: string;
+	dnsProvider: string;
+	dnsTokenSet: boolean;
+	source: "api" | "env";
+	status: "" | "issuing" | "active" | "failed";
+	error: string;
+	certNotAfter: string | null;
+	dnsRecords: DnsRecord[];
+	dnsOk: boolean;
+};
+
+type RawDomainStatus = {
+	domain: string;
+	dns_provider: string;
+	dns_token_set: boolean;
+	source: "api" | "env";
+	status: "" | "issuing" | "active" | "failed";
+	error: string;
+	cert_not_after?: string | null;
+	dns_records: DnsRecord[];
+	dns_ok: boolean;
+};
+
+function toDomainStatus(raw: RawDomainStatus): DomainStatus {
+	return {
+		domain: raw.domain,
+		dnsProvider: raw.dns_provider,
+		dnsTokenSet: raw.dns_token_set,
+		source: raw.source,
+		status: raw.status,
+		error: raw.error,
+		certNotAfter: raw.cert_not_after ?? null,
+		dnsRecords: (raw.dns_records ?? []).map((r) => ({
+			type: r.type,
+			name: r.name,
+			value: r.value,
+		})),
+		dnsOk: raw.dns_ok,
+	};
+}
+
+export async function getDomain(
+	credential: string,
+	base: string,
+): Promise<DomainStatus> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/domain`,
+		{ headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay get domain returned ${res.status}`);
+	}
+	return toDomainStatus((await res.json()) as RawDomainStatus);
+}
+
+export async function setDomain(
+	credential: string,
+	base: string,
+	config: { domain: string; provider: string; token: string },
+): Promise<DomainStatus> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/domain`,
+		{
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				domain: config.domain,
+				dns_provider: config.provider,
+				dns_token: config.token,
+			}),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay set domain returned ${res.status}`);
+	}
+	return toDomainStatus((await res.json()) as RawDomainStatus);
+}
+
+export async function removeDomain(
+	credential: string,
+	base: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/domain`,
+		{
+			method: "DELETE",
+			headers: { Authorization: `Bearer ${credential}` },
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (res.status !== 204) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay remove domain returned ${res.status}`);
+	}
+}

@@ -9,9 +9,12 @@ import {
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	getDomain,
 	githubManifest,
 	linkApp,
 	RelayAuthError,
+	removeDomain,
+	setDomain,
 	stopApp,
 } from "./relay";
 
@@ -151,6 +154,49 @@ export const deleteAppFn = createServerFn({ method: "POST" })
 		if (!credential) throw redirect({ to: "/login" });
 		try {
 			await deleteApp(credential, data.base, data.name);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const getDomainFn = createServerFn()
+	.validator((base: string) => base)
+	.handler(async ({ data: base }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await getDomain(credential, base);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const setDomainFn = createServerFn({ method: "POST" })
+	.validator((d: { base: string; domain: string; token: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await setDomain(credential, data.base, {
+				domain: data.domain,
+				provider: "cloudflare",
+				token: data.token,
+			});
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const removeDomainFn = createServerFn({ method: "POST" })
+	.validator((base: string) => base)
+	.handler(async ({ data: base }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await removeDomain(credential, base);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;
