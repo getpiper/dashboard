@@ -5,6 +5,8 @@ import {
 	fetchApps,
 	fetchBox,
 	fetchBoxes,
+	fetchDeploymentLogs,
+	fetchDeployments,
 	RelayAuthError,
 	relayUrl,
 } from "./relay";
@@ -253,4 +255,117 @@ test("fetchBox returns an offline box with no apps when not connected", async ()
 		connected: false,
 		apps: [],
 	});
+});
+
+test("fetchDeployments GETs the deployments path and maps capitalized keys", async () => {
+	let seenUrl = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return Response.json([
+			{
+				ID: "dep-abc123",
+				App: "web",
+				PR: 0,
+				ImageID: "img",
+				ContainerID: "ctr",
+				HostPort: 8081,
+				Status: "running",
+				CreatedAt: "2026-07-11T10:00:00Z",
+			},
+			{
+				ID: "dep-def456",
+				App: "web",
+				PR: 12,
+				ImageID: "img2",
+				ContainerID: "ctr2",
+				HostPort: 8082,
+				Status: "failed",
+				CreatedAt: "2026-07-11T09:00:00Z",
+			},
+		]);
+	}) as typeof fetch;
+
+	const deps = await fetchDeployments(
+		"cred-1",
+		"abc-zoe.public.example",
+		"web",
+	);
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/apps/web/deployments",
+	);
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+	expect(deps).toEqual([
+		{
+			id: "dep-abc123",
+			pr: 0,
+			status: "running",
+			createdAt: "2026-07-11T10:00:00Z",
+		},
+		{
+			id: "dep-def456",
+			pr: 12,
+			status: "failed",
+			createdAt: "2026-07-11T09:00:00Z",
+		},
+	]);
+});
+
+test("fetchDeployments throws RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("unauthorized", { status: 401 })) as unknown as typeof fetch;
+	expect(
+		fetchDeployments("bad", "abc-zoe.public.example", "web"),
+	).rejects.toBeInstanceOf(RelayAuthError);
+});
+
+test("fetchDeployments throws BoxOfflineError on 503 and 502", async () => {
+	globalThis.fetch = (async () =>
+		new Response("offline", { status: 503 })) as unknown as typeof fetch;
+	expect(
+		fetchDeployments("cred-1", "abc-zoe.public.example", "web"),
+	).rejects.toBeInstanceOf(BoxOfflineError);
+	globalThis.fetch = (async () =>
+		new Response("unreachable", { status: 502 })) as unknown as typeof fetch;
+	expect(
+		fetchDeployments("cred-1", "abc-zoe.public.example", "web"),
+	).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
+test("fetchDeployments throws a plain error on other failures", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 404 })) as unknown as typeof fetch;
+	expect(
+		fetchDeployments("cred-1", "abc-zoe.public.example", "gone"),
+	).rejects.toThrow(/404/);
+});
+
+test("fetchDeploymentLogs GETs the logs path and returns the text body", async () => {
+	let seenUrl = "";
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		seenUrl = String(url);
+		return new Response("build step 1\nbuild step 2\n", {
+			headers: { "Content-Type": "text/plain" },
+		});
+	}) as typeof fetch;
+
+	const logs = await fetchDeploymentLogs(
+		"cred-1",
+		"abc-zoe.public.example",
+		"web",
+		"dep-abc123",
+	);
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/apps/web/deployments/dep-abc123/logs",
+	);
+	expect(logs).toBe("build step 1\nbuild step 2\n");
+});
+
+test("fetchDeploymentLogs throws BoxOfflineError on 503", async () => {
+	globalThis.fetch = (async () =>
+		new Response("offline", { status: 503 })) as unknown as typeof fetch;
+	expect(
+		fetchDeploymentLogs("cred-1", "abc-zoe.public.example", "web", "dep-x"),
+	).rejects.toBeInstanceOf(BoxOfflineError);
 });
