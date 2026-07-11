@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { BoxWithApps } from "@/server/relay";
 import { StatusPill } from "./status-pill";
 
@@ -24,12 +25,15 @@ export function BoxDetail({ box }: { box: BoxWithApps }) {
 			) : (
 				<ul className="flex flex-col gap-2">
 					{box.apps.map((app) => (
-						<li
-							key={app.name}
-							className="flex items-center justify-between rounded-lg border border-[var(--line)] px-4 py-3"
-						>
-							<span className="font-medium text-sm">{app.name}</span>
-							<StatusPill status={app.status} />
+						<li key={app.name}>
+							<Link
+								to="/boxes/$base/apps/$app"
+								params={{ base: box.base, app: app.name }}
+								className="flex items-center justify-between rounded-lg border border-[var(--line)] px-4 py-3 hover:bg-[var(--chip-bg)]"
+							>
+								<span className="font-medium text-sm">{app.name}</span>
+								<StatusPill status={app.status} />
+							</Link>
 						</li>
 					))}
 				</ul>

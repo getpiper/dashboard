@@ -110,3 +110,72 @@ export async function fetchBox(
 	const connected = boxes.find((b) => b.agent === base)?.connected ?? false;
 	return appsForBox(credential, base, connected);
 }
+
+export type Deployment = {
+	id: string;
+	pr: number;
+	status: string;
+	createdAt: string;
+};
+
+type RawDeployment = {
+	ID: string;
+	PR: number;
+	Status: string;
+	CreatedAt: string;
+};
+
+export async function fetchDeployments(
+	credential: string,
+	base: string,
+	app: string,
+): Promise<Deployment[]> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			app,
+		)}/deployments`,
+		{ headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (!res.ok) {
+		throw new Error(
+			`relay /agents/${base}/v1/apps/${app}/deployments returned ${res.status}`,
+		);
+	}
+	const raw = (await res.json()) as RawDeployment[];
+	return raw.map((d) => ({
+		id: d.ID,
+		pr: d.PR,
+		status: d.Status,
+		createdAt: d.CreatedAt,
+	}));
+}
+
+export async function fetchDeploymentLogs(
+	credential: string,
+	base: string,
+	app: string,
+	id: string,
+): Promise<string> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			app,
+		)}/deployments/${encodeURIComponent(id)}/logs`,
+		{ headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (!res.ok) {
+		throw new Error(`relay deployment logs returned ${res.status}`);
+	}
+	return res.text();
+}
