@@ -3,15 +3,7 @@ import { relativeTime } from "@/lib/relative-time";
 import type { App, Deployment } from "@/server/relay";
 import { StatusPill } from "./status-pill";
 
-// TODO(https://github.com/getpiper/piper/issues/137): the relay assigns each
-// app's real public hostname at deploy time and does not return it in the apps
-// API. This mock stands in until that lands (mirrors apps-home.tsx).
-function mockAppUrl(app: string, base: string): string {
-	return `${app}-${base}.public.getpiper.co`;
-}
-
 export type AppDetailProps = {
-	base: string;
 	appName: string;
 	connected: boolean;
 	app: App | null;
@@ -21,7 +13,6 @@ export type AppDetailProps = {
 };
 
 export function AppDetail({
-	base,
 	appName,
 	connected,
 	app,
@@ -49,7 +40,6 @@ export function AppDetail({
 		);
 	}
 
-	const url = mockAppUrl(app.name, base);
 	return (
 		<main className="page-wrap flex flex-col gap-6 px-4 py-8">
 			<div className="flex flex-col gap-1.5">
@@ -57,12 +47,18 @@ export function AppDetail({
 					<h1 className="font-mono font-semibold text-xl">{app.name}</h1>
 					<StatusPill status={app.status} />
 				</div>
-				<a
-					href={`https://${url}`}
-					className="text-muted-foreground text-sm underline"
-				>
-					{url}
-				</a>
+				{app.hostname ? (
+					<a
+						href={`https://${app.hostname}`}
+						className="text-muted-foreground text-sm underline"
+					>
+						{app.hostname}
+					</a>
+				) : (
+					<span className="text-muted-foreground text-sm">
+						Not deployed yet
+					</span>
+				)}
 				<p className="text-muted-foreground text-sm">
 					{app.repo} · {app.branch}
 				</p>

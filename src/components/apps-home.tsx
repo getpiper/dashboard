@@ -3,13 +3,6 @@ import { relativeTime } from "@/lib/relative-time";
 import type { BoxWithApps } from "@/server/relay";
 import { StatusBadge } from "./status-badge";
 
-// TODO(https://github.com/getpiper/piper/issues/137): the relay assigns each app's real public hostname at deploy
-// time (<app-hash>-<username>.public.getpiper.co) and does not return it in
-// /v1/apps. This mock stands in until the apps API exposes the real host.
-function mockAppUrl(app: string, base: string): string {
-	return `${app}-${base}.public.getpiper.co`;
-}
-
 export function AppsHome({ boxes }: { boxes: BoxWithApps[] }) {
 	if (boxes.length === 0) {
 		return (
@@ -94,12 +87,18 @@ export function AppsHome({ boxes }: { boxes: BoxWithApps[] }) {
 										<span className="font-semibold text-sm text-[var(--sea-ink)]">
 											{a.name}
 										</span>
-										<a
-											href={`https://${mockAppUrl(a.name, box.base)}`}
-											className="truncate font-mono text-[var(--lagoon-deep)] text-xs no-underline hover:underline"
-										>
-											{mockAppUrl(a.name, box.base)}
-										</a>
+										{a.hostname ? (
+											<a
+												href={`https://${a.hostname}`}
+												className="truncate font-mono text-[var(--lagoon-deep)] text-xs no-underline hover:underline"
+											>
+												{a.hostname}
+											</a>
+										) : (
+											<span className="truncate font-mono text-muted-foreground text-xs">
+												Not deployed yet
+											</span>
+										)}
 									</div>
 									<div className="flex flex-shrink-0 items-center gap-3.5">
 										<StatusBadge status={a.status} />
