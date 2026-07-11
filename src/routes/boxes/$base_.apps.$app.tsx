@@ -1,7 +1,13 @@
 import { createFileRoute, isRedirect, useRouter } from "@tanstack/react-router";
 import { AppDetail } from "@/components/app-detail";
 import { RelayError } from "@/components/relay-error";
-import { getBox, getDeploymentLogs, getDeployments } from "@/server/fns";
+import {
+	deleteAppFn,
+	getBox,
+	getDeploymentLogs,
+	getDeployments,
+	stopAppFn,
+} from "@/server/fns";
 
 export const Route = createFileRoute("/boxes/$base_/apps/$app")({
 	loader: async ({ params }) => {
@@ -41,6 +47,14 @@ function AppDetailPage() {
 			}}
 			refresh={() => {
 				router.invalidate();
+			}}
+			onStop={async () => {
+				await stopAppFn({ data: { base, name: appName } });
+				router.invalidate();
+			}}
+			onDelete={async () => {
+				await deleteAppFn({ data: { base, name: appName } });
+				await router.navigate({ to: "/boxes/$base", params: { base } });
 			}}
 		/>
 	);
