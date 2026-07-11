@@ -27,16 +27,18 @@ test("relayUrl throws an explicit config error when unset", () => {
 	expect(() => relayUrl()).toThrow(/PIPER_RELAY_URL/);
 });
 
-test("fetchBoxes calls GET {relay}/agents with the bearer credential", async () => {
+test("fetchBoxes calls GET {relay}/agents and parses the agents envelope", async () => {
 	let seenUrl = "";
 	let seenAuth: string | null = null;
 	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
 		seenUrl = String(url);
 		seenAuth = new Headers(init?.headers).get("Authorization");
-		return Response.json([
-			{ agent: "abc123-zoe.public.example", connected: true },
-			{ agent: "def456-zoe.public.example", connected: false },
-		]);
+		return Response.json({
+			agents: [
+				{ agent: "abc123-zoe.public.example", connected: true },
+				{ agent: "def456-zoe.public.example", connected: false },
+			],
+		});
 	}) as typeof fetch;
 
 	const boxes = await fetchBoxes("cred-1");

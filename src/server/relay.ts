@@ -22,5 +22,6 @@ export async function fetchBoxes(credential: string): Promise<Box[]> {
 	if (!res.ok) {
 		throw new Error(`relay /agents returned ${res.status}`);
 	}
-	return (await res.json()) as Box[];
+	const body = (await res.json()) as { agents: Box[] };
+	return body.agents;
 }
