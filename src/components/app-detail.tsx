@@ -12,6 +12,7 @@ function mockAppUrl(app: string, base: string): string {
 
 export type AppDetailProps = {
 	base: string;
+	appName: string;
 	connected: boolean;
 	app: App | null;
 	deployments: Deployment[];
@@ -21,17 +22,28 @@ export type AppDetailProps = {
 
 export function AppDetail({
 	base,
+	appName,
 	connected,
 	app,
 	deployments,
 	fetchLogs,
 	refresh,
 }: AppDetailProps) {
-	if (!connected || !app) {
+	if (!connected) {
 		return (
 			<main className="page-wrap flex flex-col gap-4 px-4 py-8">
 				<p className="text-muted-foreground">
 					This box is offline — its apps can't be reached.
+				</p>
+			</main>
+		);
+	}
+
+	if (!app) {
+		return (
+			<main className="page-wrap flex flex-col gap-4 px-4 py-8">
+				<p className="text-muted-foreground">
+					App "{appName}" not found on this box.
 				</p>
 			</main>
 		);

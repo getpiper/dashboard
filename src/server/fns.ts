@@ -2,7 +2,6 @@ import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 import {
-	BoxOfflineError,
 	fetchAllApps,
 	fetchBox,
 	fetchDeploymentLogs,
@@ -56,8 +55,6 @@ export const getDeployments = createServerFn()
 			return await fetchDeployments(credential, data.base, data.app);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
-			// The box dropped between the box lookup and this fetch.
-			if (err instanceof BoxOfflineError) return [];
 			throw err;
 		}
 	});

@@ -27,6 +27,7 @@ test("renders the app header with repo and branch", () => {
 	render(
 		<AppDetail
 			base="abc-zoe.public.example"
+			appName="web"
 			connected={true}
 			app={app}
 			deployments={[]}
@@ -43,6 +44,7 @@ test("shows an offline message when the app is null", () => {
 	render(
 		<AppDetail
 			base="abc-zoe.public.example"
+			appName="web"
 			connected={false}
 			app={null}
 			deployments={[]}
@@ -53,10 +55,26 @@ test("shows an offline message when the app is null", () => {
 	expect(screen.getByText(/offline/i)).toBeTruthy();
 });
 
+test("shows a not-found message when the box is connected but the app is missing", () => {
+	render(
+		<AppDetail
+			base="abc-zoe.public.example"
+			appName="web"
+			connected={true}
+			app={null}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+		/>,
+	);
+	expect(screen.getByText(/not found/i)).toBeTruthy();
+});
+
 test("lists deployments and distinguishes production from PR previews", () => {
 	render(
 		<AppDetail
 			base="abc-zoe.public.example"
+			appName="web"
 			connected={true}
 			app={app}
 			deployments={[
@@ -79,6 +97,7 @@ test("expanding a deployment fetches and shows its logs", async () => {
 	render(
 		<AppDetail
 			base="abc-zoe.public.example"
+			appName="web"
 			connected={true}
 			app={app}
 			deployments={[dep({ id: "dep-abc1234", status: "failed" })]}
@@ -101,6 +120,7 @@ test("a building deployment live-tails logs and refreshes on interval", async ()
 	render(
 		<AppDetail
 			base="abc-zoe.public.example"
+			appName="web"
 			connected={true}
 			app={app}
 			deployments={[dep({ id: "dep-build001", status: "building" })]}

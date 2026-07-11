@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, isRedirect, useRouter } from "@tanstack/react-router";
 import { AppDetail } from "@/components/app-detail";
 import { RelayError } from "@/components/relay-error";
 import { getBox, getDeploymentLogs, getDeployments } from "@/server/fns";
@@ -25,6 +25,7 @@ function AppDetailPage() {
 	return (
 		<AppDetail
 			base={base}
+			appName={appName}
 			connected={box.connected}
 			app={app}
 			deployments={deployments}
@@ -33,7 +34,8 @@ function AppDetailPage() {
 					return await getDeploymentLogs({
 						data: { base, app: appName, id },
 					});
-				} catch {
+				} catch (err) {
+					if (isRedirect(err)) throw err;
 					return "Couldn't load logs.";
 				}
 			}}
