@@ -168,6 +168,16 @@ export function ImportWizard({
 			{step === "create" && (
 				<section className="flex flex-col gap-3">
 					<h2 className="font-semibold text-sm">2 · Create &amp; link app</h2>
+					<p className="text-muted-foreground text-sm">
+						Make sure the Piper GitHub App is installed on the repo you want to
+						deploy — without it, pushing won't trigger a build.
+					</p>
+					<a
+						href="https://github.com/settings/installations"
+						className="text-muted-foreground text-sm underline"
+					>
+						Manage installed GitHub Apps
+					</a>
 					<form onSubmit={onCreate} className="flex flex-col gap-3">
 						<label className="flex flex-col gap-1 text-sm">
 							App name

@@ -52,6 +52,17 @@ test("Skip advances from Connect to the Create step", async () => {
 	expect(screen.getByRole("heading", { name: /create & link/i })).toBeTruthy();
 });
 
+test("the Create step surfaces the install-the-app guidance link", async () => {
+	await renderWizard();
+	fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+	const link = screen.getByRole("link", {
+		name: /manage installed github apps/i,
+	});
+	expect(link.getAttribute("href")).toBe(
+		"https://github.com/settings/installations",
+	);
+});
+
 test("Connect fetches the manifest and submits a form to GitHub (org variant)", async () => {
 	const submitManifest = mock(() => {});
 	await renderWizard({
