@@ -72,3 +72,38 @@ export async function fetchApps(
 		status: a.Status,
 	}));
 }
+
+export type BoxWithApps = { base: string; connected: boolean; apps: App[] };
+
+async function appsForBox(
+	credential: string,
+	base: string,
+	connected: boolean,
+): Promise<BoxWithApps> {
+	if (!connected) return { base, connected: false, apps: [] };
+	try {
+		return { base, connected: true, apps: await fetchApps(credential, base) };
+	} catch (err) {
+		// The box dropped between the liveness snapshot and this fetch.
+		if (err instanceof BoxOfflineError) {
+			return { base, connected: false, apps: [] };
+		}
+		throw err;
+	}
+}
+
+export async function fetchAllApps(credential: string): Promise<BoxWithApps[]> {
+	const boxes = await fetchBoxes(credential);
+	return Promise.all(
+		boxes.map((box) => appsForBox(credential, box.agent, box.connected)),
+	);
+}
+
+export async function fetchBox(
+	credential: string,
+	base: string,
+): Promise<BoxWithApps> {
+	const boxes = await fetchBoxes(credential);
+	const connected = boxes.find((b) => b.agent === base)?.connected ?? false;
+	return appsForBox(credential, base, connected);
+}
