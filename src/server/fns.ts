@@ -2,10 +2,14 @@ import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 import {
+	createApp,
+	exchangeGithub,
 	fetchAllApps,
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	githubManifest,
+	linkApp,
 	RelayAuthError,
 } from "./relay";
 
@@ -71,6 +75,54 @@ export const getDeploymentLogs = createServerFn()
 				data.app,
 				data.id,
 			);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const getGithubManifest = createServerFn({ method: "POST" })
+	.validator((d: { base: string; redirectUrl: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await githubManifest(credential, data.base, data.redirectUrl);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const exchangeGithubApp = createServerFn({ method: "POST" })
+	.validator((d: { base: string; code: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await exchangeGithub(credential, data.base, data.code);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const createAndLinkApp = createServerFn({ method: "POST" })
+	.validator(
+		(d: {
+			base: string;
+			name: string;
+			repo: string;
+			branch: string;
+			port?: number;
+		}) => d,
+	)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await createApp(credential, data.base, data.name, data.port ?? 8080);
+			await linkApp(credential, data.base, data.name, data.repo, data.branch);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;
