@@ -115,6 +115,16 @@ test("fetchApps throws BoxOfflineError on 503", async () => {
 	).rejects.toBeInstanceOf(BoxOfflineError);
 });
 
+test("fetchApps throws BoxOfflineError on 502", async () => {
+	globalThis.fetch = (async () =>
+		new Response("box unreachable", {
+			status: 502,
+		})) as unknown as typeof fetch;
+	expect(
+		fetchApps("cred-1", "abc123-zoe.public.example"),
+	).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
 test("fetchApps throws RelayAuthError on 401", async () => {
 	globalThis.fetch = (async () =>
 		new Response("unauthorized", { status: 401 })) as unknown as typeof fetch;
@@ -135,6 +145,7 @@ function routeFetch(routes: Record<string, unknown>) {
 		if (!(key in routes)) return new Response("no route", { status: 500 });
 		const body = routes[key];
 		if (body === 503) return new Response("offline", { status: 503 });
+		if (body === 502) return new Response("unreachable", { status: 502 });
 		return Response.json(body);
 	}) as typeof fetch;
 }
@@ -185,6 +196,20 @@ test("fetchAllApps treats a box that 503s mid-fan-out as offline", async () => {
 			agents: [{ agent: "raced-zoe.public.example", connected: true }],
 		},
 		"https://relay.test/agents/raced-zoe.public.example/v1/apps": 503,
+	});
+
+	const boxes = await fetchAllApps("cred-1");
+	expect(boxes).toEqual([
+		{ base: "raced-zoe.public.example", connected: false, apps: [] },
+	]);
+});
+
+test("fetchAllApps treats a box that 502s mid-fan-out as offline", async () => {
+	routeFetch({
+		"https://relay.test/agents": {
+			agents: [{ agent: "raced-zoe.public.example", connected: true }],
+		},
+		"https://relay.test/agents/raced-zoe.public.example/v1/apps": 502,
 	});
 
 	const boxes = await fetchAllApps("cred-1");

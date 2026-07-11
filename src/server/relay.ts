@@ -50,13 +50,16 @@ export async function fetchApps(
 	credential: string,
 	base: string,
 ): Promise<App[]> {
-	const res = await fetch(`${relayUrl()}/agents/${base}/v1/apps`, {
-		headers: { Authorization: `Bearer ${credential}` },
-	});
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps`,
+		{
+			headers: { Authorization: `Bearer ${credential}` },
+		},
+	);
 	if (res.status === 401) {
 		throw new RelayAuthError("relay rejected the session credential");
 	}
-	if (res.status === 503) {
+	if (res.status === 502 || res.status === 503) {
 		throw new BoxOfflineError(`box ${base} is offline`);
 	}
 	if (!res.ok) {
