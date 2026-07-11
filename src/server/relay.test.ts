@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { fetchBoxes, RelayAuthError, relayUrl } from "./relay";
+import {
+	BoxOfflineError,
+	fetchApps,
+	fetchBoxes,
+	RelayAuthError,
+	relayUrl,
+} from "./relay";
 
 const originalFetch = globalThis.fetch;
 const originalEnv = process.env.PIPER_RELAY_URL;
@@ -60,4 +66,63 @@ test("fetchBoxes throws a plain error on other failures", async () => {
 	globalThis.fetch = (async () =>
 		new Response("boom", { status: 502 })) as unknown as typeof fetch;
 	expect(fetchBoxes("cred-1")).rejects.toThrow(/502/);
+});
+
+test("fetchApps GETs {relay}/agents/{base}/v1/apps and maps capitalized keys", async () => {
+	let seenUrl = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return Response.json([
+			{
+				Name: "web",
+				Port: 8081,
+				Repo: "getpiper/example",
+				Branch: "main",
+				CreatedAt: "2026-07-11T10:00:00Z",
+				Status: "running",
+			},
+		]);
+	}) as typeof fetch;
+
+	const apps = await fetchApps("cred-1", "abc123-zoe.public.example");
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc123-zoe.public.example/v1/apps",
+	);
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+	expect(apps).toEqual([
+		{
+			name: "web",
+			port: 8081,
+			repo: "getpiper/example",
+			branch: "main",
+			createdAt: "2026-07-11T10:00:00Z",
+			status: "running",
+		},
+	]);
+});
+
+test("fetchApps throws BoxOfflineError on 503", async () => {
+	globalThis.fetch = (async () =>
+		new Response("agent not connected", {
+			status: 503,
+		})) as unknown as typeof fetch;
+	expect(
+		fetchApps("cred-1", "abc123-zoe.public.example"),
+	).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
+test("fetchApps throws RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("unauthorized", { status: 401 })) as unknown as typeof fetch;
+	expect(fetchApps("bad", "abc123-zoe.public.example")).rejects.toBeInstanceOf(
+		RelayAuthError,
+	);
+});
+
+test("fetchApps throws a plain error on other failures", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 404 })) as unknown as typeof fetch;
+	expect(fetchApps("cred-1", "gone-zoe.public.example")).rejects.toThrow(/404/);
 });
