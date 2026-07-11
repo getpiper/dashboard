@@ -14,6 +14,17 @@ const CERT: Record<string, { label: string; dot: string }> = {
 	failed: { label: "Failed", dot: "bg-red-500" },
 };
 
+// The box sends the cert expiry as an RFC3339 timestamp; show just the date.
+// Fixed locale + UTC keeps it deterministic regardless of the viewer's timezone.
+function formatDate(iso: string): string {
+	return new Date(iso).toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		timeZone: "UTC",
+	});
+}
+
 export type DomainPanelProps = {
 	status: DomainStatus;
 	onSave: (domain: string, token: string) => Promise<void>;
@@ -104,6 +115,7 @@ function ConfigForm({
 				<input
 					aria-label="DNS API token"
 					type="password"
+					autoComplete="off"
 					value={token}
 					onChange={(e) => setToken(e.target.value)}
 					className={field}
@@ -160,7 +172,7 @@ function Configured({
 			)}
 			{status.status === "active" && status.certNotAfter && (
 				<p className="text-muted-foreground text-sm">
-					Certificate valid until {status.certNotAfter}.
+					Certificate valid until {formatDate(status.certNotAfter)}.
 				</p>
 			)}
 			<p className="text-muted-foreground text-sm">

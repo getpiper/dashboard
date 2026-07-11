@@ -102,7 +102,7 @@ test("configured+active shows the cert expiry", () => {
 		/>,
 	);
 	expect(screen.getByText(/active/i)).toBeTruthy();
-	expect(screen.getByText(/2026-10-10/)).toBeTruthy();
+	expect(screen.getByText(/October 10, 2026/)).toBeTruthy();
 });
 
 test("configured+failed shows the error text", () => {
