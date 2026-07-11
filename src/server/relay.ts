@@ -298,3 +298,55 @@ export async function linkApp(
 		throw new Error(msg || `relay link returned ${res.status}`);
 	}
 }
+
+export async function stopApp(
+	credential: string,
+	base: string,
+	name: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			name,
+		)}/stop`,
+		{
+			method: "POST",
+			headers: { Authorization: `Bearer ${credential}` },
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (res.status !== 204) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay stop app returned ${res.status}`);
+	}
+}
+
+export async function deleteApp(
+	credential: string,
+	base: string,
+	name: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			name,
+		)}`,
+		{
+			method: "DELETE",
+			headers: { Authorization: `Bearer ${credential}` },
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (res.status !== 204) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay delete app returned ${res.status}`);
+	}
+}
