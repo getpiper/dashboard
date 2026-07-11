@@ -9,6 +9,9 @@ export type App = {
 	port: number;
 	repo: string;
 	branch: string;
+	// Public host the app is served on, assigned by the relay at deploy time.
+	// Empty until the app's first deploy.
+	hostname: string;
 	createdAt: string;
 	status: string;
 };
@@ -18,6 +21,7 @@ type RawApp = {
 	Port: number;
 	Repo: string;
 	Branch: string;
+	Hostname: string;
 	CreatedAt: string;
 	Status: string;
 };
@@ -71,6 +75,7 @@ export async function fetchApps(
 		port: a.Port,
 		repo: a.Repo,
 		branch: a.Branch,
+		hostname: a.Hostname,
 		createdAt: a.CreatedAt,
 		status: a.Status,
 	}));

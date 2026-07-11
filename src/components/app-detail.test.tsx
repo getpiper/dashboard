@@ -8,6 +8,7 @@ const app: App = {
 	port: 8081,
 	repo: "getpiper/example",
 	branch: "main",
+	hostname: "web-hash-zoe.public.example",
 	createdAt: "2026-07-11T10:00:00Z",
 	status: "running",
 };
@@ -26,7 +27,6 @@ const emptyLogs = async () => "";
 test("renders the app header with repo and branch", () => {
 	render(
 		<AppDetail
-			base="abc-zoe.public.example"
 			appName="web"
 			connected={true}
 			app={app}
@@ -40,10 +40,38 @@ test("renders the app header with repo and branch", () => {
 	expect(screen.getByText(/main/)).toBeTruthy();
 });
 
+test("links to the app's relay-assigned hostname", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+		/>,
+	);
+	const link = screen.getByText("web-hash-zoe.public.example");
+	expect(link.getAttribute("href")).toBe("https://web-hash-zoe.public.example");
+});
+
+test("shows 'Not deployed yet' when the app has no hostname", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={{ ...app, hostname: "" }}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+		/>,
+	);
+	expect(screen.getByText(/not deployed yet/i)).toBeTruthy();
+});
+
 test("shows an offline message when the app is null", () => {
 	render(
 		<AppDetail
-			base="abc-zoe.public.example"
 			appName="web"
 			connected={false}
 			app={null}
@@ -58,7 +86,6 @@ test("shows an offline message when the app is null", () => {
 test("shows a not-found message when the box is connected but the app is missing", () => {
 	render(
 		<AppDetail
-			base="abc-zoe.public.example"
 			appName="web"
 			connected={true}
 			app={null}
@@ -73,7 +100,6 @@ test("shows a not-found message when the box is connected but the app is missing
 test("lists deployments and distinguishes production from PR previews", () => {
 	render(
 		<AppDetail
-			base="abc-zoe.public.example"
 			appName="web"
 			connected={true}
 			app={app}
@@ -96,7 +122,6 @@ test("expanding a deployment fetches and shows its logs", async () => {
 	const fetchLogs = async (id: string) => `logs for ${id}`;
 	render(
 		<AppDetail
-			base="abc-zoe.public.example"
 			appName="web"
 			connected={true}
 			app={app}
@@ -119,7 +144,6 @@ test("a building deployment live-tails logs and refreshes on interval", async ()
 	};
 	render(
 		<AppDetail
-			base="abc-zoe.public.example"
 			appName="web"
 			connected={true}
 			app={app}

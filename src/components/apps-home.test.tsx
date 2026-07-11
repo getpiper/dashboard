@@ -19,11 +19,16 @@ async function renderInRouter(boxes: BoxWithApps[]) {
 	render(<RouterProvider router={router as any} />);
 }
 
-const app = (name: string, status: string): BoxWithApps["apps"][number] => ({
+const app = (
+	name: string,
+	status: string,
+	hostname = `${name}-hash.public.example`,
+): BoxWithApps["apps"][number] => ({
 	name,
 	port: 8081,
 	repo: "r",
 	branch: "main",
+	hostname,
 	createdAt: "2026-07-11T10:00:00Z",
 	status,
 });
@@ -46,18 +51,29 @@ test("summarises box and live-app counts", async () => {
 	expect(screen.getByText("1 apps live")).toBeTruthy();
 });
 
-test("renders each app's public URL as a link", async () => {
+test("renders each app's relay-assigned URL as a link", async () => {
 	await renderInRouter([
 		{
 			base: "7f3c9a2-octocat",
 			connected: true,
-			apps: [app("blog", "running")],
+			apps: [app("blog", "running", "7f3c9a2-octocat.public.getpiper.co")],
 		},
 	]);
-	const link = screen.getByText("blog-7f3c9a2-octocat.public.getpiper.co");
+	const link = screen.getByText("7f3c9a2-octocat.public.getpiper.co");
 	expect(link.getAttribute("href")).toBe(
-		"https://blog-7f3c9a2-octocat.public.getpiper.co",
+		"https://7f3c9a2-octocat.public.getpiper.co",
 	);
+});
+
+test("shows 'Not deployed yet' for an app with no hostname", async () => {
+	await renderInRouter([
+		{
+			base: "7f3c9a2-octocat",
+			connected: true,
+			apps: [app("blog", "stopped", "")],
+		},
+	]);
+	expect(screen.getByText(/not deployed yet/i)).toBeTruthy();
 });
 
 test("renders an offline box with no app rows", async () => {

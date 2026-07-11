@@ -24,7 +24,6 @@ function AppDetailPage() {
 	const router = useRouter();
 	return (
 		<AppDetail
-			base={base}
 			appName={appName}
 			connected={box.connected}
 			app={app}
