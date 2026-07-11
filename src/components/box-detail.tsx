@@ -15,6 +15,13 @@ export function BoxDetail({ box }: { box: BoxWithApps }) {
 				{box.connected && (
 					<span className="text-muted-foreground text-sm">Connected</span>
 				)}
+				<Link
+					to="/boxes/$base/import"
+					params={{ base: box.base }}
+					className="ml-auto rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm hover:bg-[var(--chip-bg)]"
+				>
+					New project
+				</Link>
 			</div>
 			{!box.connected ? (
 				<p className="text-muted-foreground">

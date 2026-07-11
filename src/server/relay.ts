@@ -179,3 +179,122 @@ export async function fetchDeploymentLogs(
 	}
 	return res.text();
 }
+
+export async function githubManifest(
+	credential: string,
+	base: string,
+	redirectUrl: string,
+): Promise<string> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/github/manifest`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ redirect_url: redirectUrl }),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (!res.ok) {
+		throw new Error(`relay github manifest returned ${res.status}`);
+	}
+	const body = (await res.json()) as { manifest: string };
+	return body.manifest;
+}
+
+export async function exchangeGithub(
+	credential: string,
+	base: string,
+	code: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/github/exchange`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ code }),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (res.status !== 204) {
+		throw new Error(`relay github exchange returned ${res.status}`);
+	}
+}
+
+export async function createApp(
+	credential: string,
+	base: string,
+	name: string,
+	port: number,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ name, port }),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	// The app already exists — a safe re-run; proceed to link.
+	if (res.status === 409) return;
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay create app returned ${res.status}`);
+	}
+}
+
+export async function linkApp(
+	credential: string,
+	base: string,
+	name: string,
+	repo: string,
+	branch: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			name,
+		)}/link`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ repo, branch }),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 502 || res.status === 503) {
+		throw new BoxOfflineError(`box ${base} is offline`);
+	}
+	if (res.status !== 204) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay link returned ${res.status}`);
+	}
+}

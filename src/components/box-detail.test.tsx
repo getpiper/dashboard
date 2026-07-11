@@ -70,3 +70,13 @@ test("shows an offline box with no apps", async () => {
 	expect(screen.getByText(/offline/i)).toBeTruthy();
 	expect(screen.queryAllByRole("listitem")).toHaveLength(0);
 });
+
+test("offers a New project link to the import route", async () => {
+	await renderInRouter({
+		base: "up-zoe.public.example",
+		connected: true,
+		apps: [],
+	});
+	const link = screen.getByRole("link", { name: /new project/i });
+	expect(link.getAttribute("href")).toBe("/boxes/up-zoe.public.example/import");
+});

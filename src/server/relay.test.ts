@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
 	BoxOfflineError,
+	createApp,
+	exchangeGithub,
 	fetchAllApps,
 	fetchApps,
 	fetchBox,
 	fetchBoxes,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	githubManifest,
+	linkApp,
 	RelayAuthError,
 	relayUrl,
 } from "./relay";
@@ -368,4 +372,131 @@ test("fetchDeploymentLogs throws BoxOfflineError on 503", async () => {
 	expect(
 		fetchDeploymentLogs("cred-1", "abc-zoe.public.example", "web", "dep-x"),
 	).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
+test("githubManifest POSTs redirect_url and returns the manifest string", async () => {
+	let seenUrl = "";
+	let seenBody = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenBody = String(init?.body);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return Response.json({ manifest: '{"name":"piper-x"}' });
+	}) as typeof fetch;
+
+	const manifest = await githubManifest(
+		"cred-1",
+		"abc-zoe.public.example",
+		"https://dash.test/boxes/abc-zoe.public.example/import",
+	);
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/github/manifest",
+	);
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+	expect(JSON.parse(seenBody)).toEqual({
+		redirect_url: "https://dash.test/boxes/abc-zoe.public.example/import",
+	});
+	expect(manifest).toBe('{"name":"piper-x"}');
+});
+
+test("githubManifest throws RelayAuthError on 401 and BoxOfflineError on 503", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	expect(githubManifest("bad", "b", "r")).rejects.toBeInstanceOf(
+		RelayAuthError,
+	);
+	globalThis.fetch = (async () =>
+		new Response("offline", { status: 503 })) as unknown as typeof fetch;
+	expect(githubManifest("cred-1", "b", "r")).rejects.toBeInstanceOf(
+		BoxOfflineError,
+	);
+});
+
+test("exchangeGithub POSTs the code and resolves on 204", async () => {
+	let seenUrl = "";
+	let seenBody = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenBody = String(init?.body);
+		return new Response(null, { status: 204 });
+	}) as typeof fetch;
+
+	await exchangeGithub("cred-1", "abc-zoe.public.example", "code-xyz");
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/github/exchange",
+	);
+	expect(JSON.parse(seenBody)).toEqual({ code: "code-xyz" });
+});
+
+test("exchangeGithub throws BoxOfflineError when the box fails the exchange (502)", async () => {
+	globalThis.fetch = (async () =>
+		new Response("bad gateway", { status: 502 })) as unknown as typeof fetch;
+	expect(
+		exchangeGithub("cred-1", "abc-zoe.public.example", "code-xyz"),
+	).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
+test("createApp POSTs name+port and resolves on 201", async () => {
+	let seenUrl = "";
+	let seenBody = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenBody = String(init?.body);
+		return new Response(null, { status: 201 });
+	}) as typeof fetch;
+
+	await createApp("cred-1", "abc-zoe.public.example", "web", 8080);
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/apps",
+	);
+	expect(JSON.parse(seenBody)).toEqual({ name: "web", port: 8080 });
+});
+
+test("createApp tolerates 409 app-exists as success", async () => {
+	globalThis.fetch = (async () =>
+		new Response("app exists", { status: 409 })) as unknown as typeof fetch;
+	// resolves (does not throw) so the caller proceeds to link
+	await createApp("cred-1", "abc-zoe.public.example", "web", 8080);
+});
+
+test("createApp surfaces the box message on 400 (reserved name)", async () => {
+	globalThis.fetch = (async () =>
+		new Response("name reserved", { status: 400 })) as unknown as typeof fetch;
+	expect(
+		createApp("cred-1", "abc-zoe.public.example", "hooks", 8080),
+	).rejects.toThrow(/name reserved/);
+});
+
+test("linkApp POSTs repo+branch and resolves on 204", async () => {
+	let seenUrl = "";
+	let seenBody = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenBody = String(init?.body);
+		return new Response(null, { status: 204 });
+	}) as typeof fetch;
+
+	await linkApp(
+		"cred-1",
+		"abc-zoe.public.example",
+		"web",
+		"getpiper/example",
+		"main",
+	);
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/apps/web/link",
+	);
+	expect(JSON.parse(seenBody)).toEqual({
+		repo: "getpiper/example",
+		branch: "main",
+	});
+});
+
+test("linkApp surfaces the box message on 404 (unknown app)", async () => {
+	globalThis.fetch = (async () =>
+		new Response("unknown app", { status: 404 })) as unknown as typeof fetch;
+	expect(
+		linkApp("cred-1", "abc-zoe.public.example", "gone", "r", "main"),
+	).rejects.toThrow(/unknown app/);
 });

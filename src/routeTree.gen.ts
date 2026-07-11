@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BoxesBaseRouteImport } from './routes/boxes/$base'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as BoxesBaseImportRouteImport } from './routes/boxes/$base_.import'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
@@ -36,6 +37,11 @@ const BoxesBaseRoute = BoxesBaseRouteImport.update({
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoxesBaseImportRoute = BoxesBaseImportRouteImport.update({
+  id: '/boxes/$base_/import',
+  path: '/boxes/$base/import',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/boxes/$base/import': typeof BoxesBaseImportRoute
   '/boxes/$base/apps/$app': typeof BoxesBaseAppsAppRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/boxes/$base/import': typeof BoxesBaseImportRoute
   '/boxes/$base/apps/$app': typeof BoxesBaseAppsAppRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/boxes/$base_/import': typeof BoxesBaseImportRoute
   '/boxes/$base_/apps/$app': typeof BoxesBaseAppsAppRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/session'
+    | '/boxes/$base/import'
     | '/boxes/$base/apps/$app'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/session'
+    | '/boxes/$base/import'
     | '/boxes/$base/apps/$app'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/session'
+    | '/boxes/$base_/import'
     | '/boxes/$base_/apps/$app'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
+  BoxesBaseImportRoute: typeof BoxesBaseImportRoute
   BoxesBaseAppsAppRoute: typeof BoxesBaseAppsAppRoute
 }
 
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/boxes/$base_/import': {
+      id: '/boxes/$base_/import'
+      path: '/boxes/$base/import'
+      fullPath: '/boxes/$base/import'
+      preLoaderRoute: typeof BoxesBaseImportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/session': {
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
+  BoxesBaseImportRoute: BoxesBaseImportRoute,
   BoxesBaseAppsAppRoute: BoxesBaseAppsAppRoute,
 }
 export const routeTree = rootRouteImport
