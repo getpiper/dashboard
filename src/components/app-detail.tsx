@@ -1,7 +1,14 @@
+import { isRedirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { relativeTime } from "@/lib/relative-time";
 import type { App, Deployment } from "@/server/relay";
 import { StatusPill } from "./status-pill";
+
+const actionBtn =
+	"rounded-md border border-[var(--line)] px-3 py-1.5 text-sm hover:bg-[var(--chip-bg)] disabled:opacity-50";
+const dangerBtn =
+	"rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50";
+const confirmInput = "rounded-md border border-[var(--line)] px-3 py-2 text-sm";
 
 export type AppDetailProps = {
 	appName: string;
@@ -10,6 +17,8 @@ export type AppDetailProps = {
 	deployments: Deployment[];
 	fetchLogs: (id: string) => Promise<string>;
 	refresh: () => void;
+	onStop: () => Promise<void>;
+	onDelete: () => Promise<void>;
 };
 
 export function AppDetail({
@@ -19,6 +28,8 @@ export function AppDetail({
 	deployments,
 	fetchLogs,
 	refresh,
+	onStop,
+	onDelete,
 }: AppDetailProps) {
 	if (!connected) {
 		return (
@@ -62,6 +73,12 @@ export function AppDetail({
 				<p className="text-muted-foreground text-sm">
 					{app.repo} · {app.branch}
 				</p>
+				<AppActions
+					name={app.name}
+					status={app.status}
+					onStop={onStop}
+					onDelete={onDelete}
+				/>
 			</div>
 
 			<section className="flex flex-col gap-2">
@@ -83,6 +100,113 @@ export function AppDetail({
 				)}
 			</section>
 		</main>
+	);
+}
+
+function AppActions({
+	name,
+	status,
+	onStop,
+	onDelete,
+}: {
+	name: string;
+	status: string;
+	onStop: () => Promise<void>;
+	onDelete: () => Promise<void>;
+}) {
+	const [stopping, setStopping] = useState(false);
+	const [confirming, setConfirming] = useState(false);
+	const [typed, setTyped] = useState("");
+	const [deleting, setDeleting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	async function handleStop() {
+		setError(null);
+		setStopping(true);
+		try {
+			await onStop();
+		} catch (err) {
+			if (isRedirect(err)) throw err;
+			setError((err as Error).message || "Couldn't stop the app.");
+		} finally {
+			setStopping(false);
+		}
+	}
+
+	async function handleDelete() {
+		setError(null);
+		setDeleting(true);
+		try {
+			await onDelete();
+			// On success the parent navigates away and unmounts this component,
+			// so no state reset here.
+		} catch (err) {
+			if (isRedirect(err)) throw err;
+			setError((err as Error).message || "Couldn't delete the app.");
+			setDeleting(false);
+		}
+	}
+
+	return (
+		<div className="mt-1 flex flex-col gap-2">
+			<div className="flex flex-wrap items-center gap-2">
+				{status !== "stopped" && (
+					<button
+						type="button"
+						onClick={handleStop}
+						disabled={stopping}
+						className={actionBtn}
+					>
+						{stopping ? "Stopping…" : "Stop"}
+					</button>
+				)}
+				<button
+					type="button"
+					onClick={() => setConfirming(true)}
+					className={actionBtn}
+				>
+					Delete app
+				</button>
+			</div>
+
+			{confirming && (
+				<div className="flex flex-col gap-2 rounded-lg border border-red-600/40 p-3">
+					<p className="text-red-600 text-sm">
+						This permanently deletes <span className="font-mono">{name}</span>{" "}
+						and its deployments. This can't be undone — type the app name to
+						confirm.
+					</p>
+					<input
+						aria-label="Confirm app name"
+						value={typed}
+						onChange={(e) => setTyped(e.target.value)}
+						className={confirmInput}
+					/>
+					<div className="flex gap-2">
+						<button
+							type="button"
+							onClick={() => {
+								setConfirming(false);
+								setTyped("");
+							}}
+							className={actionBtn}
+						>
+							Cancel
+						</button>
+						<button
+							type="button"
+							onClick={handleDelete}
+							disabled={typed !== name || deleting}
+							className={dangerBtn}
+						>
+							{deleting ? "Deleting…" : "Delete"}
+						</button>
+					</div>
+				</div>
+			)}
+
+			{error && <p className="text-red-600 text-sm">{error}</p>}
+		</div>
 	);
 }
 

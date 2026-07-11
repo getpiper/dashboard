@@ -1,4 +1,4 @@
-import { expect, jest, test } from "bun:test";
+import { expect, jest, mock, test } from "bun:test";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { App, Deployment } from "@/server/relay";
 import { AppDetail } from "./app-detail";
@@ -23,6 +23,7 @@ const dep = (over: Partial<Deployment>): Deployment => ({
 
 const noop = () => {};
 const emptyLogs = async () => "";
+const noopAsync = async () => {};
 
 test("renders the app header with repo and branch", () => {
 	render(
@@ -33,6 +34,8 @@ test("renders the app header with repo and branch", () => {
 			deployments={[]}
 			fetchLogs={emptyLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	expect(screen.getByText("web")).toBeTruthy();
@@ -49,6 +52,8 @@ test("links to the app's relay-assigned hostname", () => {
 			deployments={[]}
 			fetchLogs={emptyLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	const link = screen.getByText("web-hash-zoe.public.example");
@@ -64,6 +69,8 @@ test("shows 'Not deployed yet' when the app has no hostname", () => {
 			deployments={[]}
 			fetchLogs={emptyLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	expect(screen.getByText(/not deployed yet/i)).toBeTruthy();
@@ -78,6 +85,8 @@ test("shows an offline message when the app is null", () => {
 			deployments={[]}
 			fetchLogs={emptyLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	expect(screen.getByText(/offline/i)).toBeTruthy();
@@ -92,6 +101,8 @@ test("shows a not-found message when the box is connected but the app is missing
 			deployments={[]}
 			fetchLogs={emptyLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	expect(screen.getByText(/not found/i)).toBeTruthy();
@@ -109,6 +120,8 @@ test("lists deployments and distinguishes production from PR previews", () => {
 			]}
 			fetchLogs={emptyLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	expect(screen.getByText(/Production/)).toBeTruthy();
@@ -128,6 +141,8 @@ test("expanding a deployment fetches and shows its logs", async () => {
 			deployments={[dep({ id: "dep-abc1234", status: "failed" })]}
 			fetchLogs={fetchLogs}
 			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /dep-abc1/ }));
@@ -152,6 +167,8 @@ test("a building deployment live-tails logs and refreshes on interval", async ()
 			refresh={() => {
 				refreshes++;
 			}}
+			onStop={noopAsync}
+			onDelete={noopAsync}
 		/>,
 	);
 	await act(async () => {
@@ -164,4 +181,146 @@ test("a building deployment live-tails logs and refreshes on interval", async ()
 	expect(calls).toBe(3);
 	expect(refreshes).toBe(2);
 	jest.useRealTimers();
+});
+
+test("Stop calls onStop and shows a pending state while it runs", async () => {
+	let release: () => void = () => {};
+	const gate = new Promise<void>((r) => {
+		release = r;
+	});
+	const onStop = mock(() => gate);
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={onStop}
+			onDelete={noopAsync}
+		/>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /^stop$/i }));
+	expect(onStop).toHaveBeenCalledTimes(1);
+	expect(screen.getByRole("button", { name: /stopping/i })).toBeTruthy();
+	await act(async () => {
+		release();
+		await gate;
+	});
+});
+
+test("hides Stop when the app is already stopped", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={{ ...app, status: "stopped" }}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
+		/>,
+	);
+	expect(screen.queryByRole("button", { name: /^stop$/i })).toBeNull();
+});
+
+test("Delete stays disabled until the exact app name is typed, then calls onDelete", async () => {
+	const onDelete = mock(async () => {});
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={onDelete}
+		/>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /delete app/i }));
+	const confirm = screen.getByRole("button", { name: /^delete$/i });
+	expect((confirm as HTMLButtonElement).disabled).toBe(true);
+	fireEvent.change(screen.getByLabelText(/confirm app name/i), {
+		target: { value: "web" },
+	});
+	expect((confirm as HTMLButtonElement).disabled).toBe(false);
+	await act(async () => {
+		fireEvent.click(confirm);
+	});
+	expect(onDelete).toHaveBeenCalledTimes(1);
+});
+
+test("Cancel collapses the confirm block without calling onDelete", () => {
+	const onDelete = mock(async () => {});
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={onDelete}
+		/>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /delete app/i }));
+	fireEvent.change(screen.getByLabelText(/confirm app name/i), {
+		target: { value: "web" },
+	});
+	fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+	expect(screen.queryByLabelText(/confirm app name/i)).toBeNull();
+	expect(onDelete).not.toHaveBeenCalled();
+});
+
+test("a rejected onStop renders the error message", async () => {
+	const onStop = async () => {
+		throw new Error("boom stop");
+	};
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={onStop}
+			onDelete={noopAsync}
+		/>,
+	);
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /^stop$/i }));
+	});
+	expect(screen.getByText(/boom stop/i)).toBeTruthy();
+});
+
+test("a rejected onDelete renders the error and keeps the confirm block", async () => {
+	const onDelete = async () => {
+		throw new Error("boom delete");
+	};
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={onDelete}
+		/>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: /delete app/i }));
+	fireEvent.change(screen.getByLabelText(/confirm app name/i), {
+		target: { value: "web" },
+	});
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+	});
+	expect(screen.getByText(/boom delete/i)).toBeTruthy();
+	expect(screen.getByLabelText(/confirm app name/i)).toBeTruthy();
 });
