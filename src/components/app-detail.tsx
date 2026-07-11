@@ -92,9 +92,19 @@ function DeploymentRow({
 	const [open, setOpen] = useState(false);
 	return (
 		<li className="rounded-lg border border-[var(--line)]">
-			<button
-				type="button"
+			{/* biome-ignore lint/a11y/useSemanticElements: a <button> can't contain
+			    the interactive PR-preview <a>, so this toggle row is a
+			    div[role=button] with keyboard handling. */}
+			<div
+				role="button"
+				tabIndex={0}
 				onClick={() => setOpen((o) => !o)}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						setOpen((o) => !o);
+					}
+				}}
 				className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
 			>
 				<span className="flex items-center gap-3">
@@ -117,7 +127,7 @@ function DeploymentRow({
 						{relativeTime(deployment.createdAt)}
 					</span>
 				</span>
-			</button>
+			</div>
 			{open && (
 				<LogPanel
 					status={deployment.status}
