@@ -1,3 +1,4 @@
+import { Settings } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import type { Org } from "@/server/relay";
 
@@ -6,6 +7,7 @@ export type OrgSwitcherProps = {
 	orgs: Org[];
 	onSelect: (scope: string) => void;
 	onCreate: (name: string) => Promise<Org>;
+	onManage: (slug: string) => void;
 };
 
 export function OrgSwitcher({
@@ -13,6 +15,7 @@ export function OrgSwitcher({
 	orgs,
 	onSelect,
 	onCreate,
+	onManage,
 }: OrgSwitcherProps) {
 	const [open, setOpen] = useState(false);
 	const [creating, setCreating] = useState(false);
@@ -67,15 +70,27 @@ export function OrgSwitcher({
 						Personal
 					</button>
 					{orgs.map((o) => (
-						<button
-							key={o.slug}
-							type="button"
-							onClick={() => pick(o.slug)}
-							className="flex items-center justify-between rounded-lg px-3 py-1.5 text-left text-sm hover:bg-[var(--chip-bg)]"
-						>
-							<span className="font-mono">{o.slug}</span>
-							<span className="text-muted-foreground text-xs">{o.role}</span>
-						</button>
+						<div key={o.slug} className="flex items-center gap-1">
+							<button
+								type="button"
+								onClick={() => pick(o.slug)}
+								className="flex flex-1 items-center justify-between rounded-lg px-3 py-1.5 text-left text-sm hover:bg-[var(--chip-bg)]"
+							>
+								<span className="font-mono">{o.slug}</span>
+								<span className="text-muted-foreground text-xs">{o.role}</span>
+							</button>
+							<button
+								type="button"
+								aria-label={`Manage ${o.slug}`}
+								onClick={() => {
+									onManage(o.slug);
+									setOpen(false);
+								}}
+								className="rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-[var(--chip-bg)]"
+							>
+								<Settings className="h-4 w-4" />
+							</button>
+						</div>
 					))}
 					{creating ? (
 						<form onSubmit={submit} className="flex flex-col gap-1.5 p-1.5">

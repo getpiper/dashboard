@@ -533,3 +533,152 @@ export async function createOrg(
 	const body = (await res.json()) as { org: string; role: string };
 	return { slug: body.org, role: body.role as Org["role"] };
 }
+
+export type OrgMember = { username: string; role: "owner" | "member" };
+
+export async function fetchOrgMembers(
+	credential: string,
+	slug: string,
+): Promise<OrgMember[]> {
+	const res = await fetch(
+		`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}/members`,
+		{ headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay list members returned ${res.status}`);
+	}
+	const body = (await res.json()) as {
+		members: { username: string; role: string }[];
+	};
+	return body.members.map((m) => ({
+		username: m.username,
+		role: m.role as OrgMember["role"],
+	}));
+}
+
+export async function fetchOrgInvites(
+	credential: string,
+	slug: string,
+): Promise<string[]> {
+	const res = await fetch(
+		`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}/invites`,
+		{ headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay list invites returned ${res.status}`);
+	}
+	const body = (await res.json()) as { invites: string[] };
+	return body.invites;
+}
+
+export async function inviteOrgMember(
+	credential: string,
+	slug: string,
+	githubUsername: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}/invites`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ github_username: githubUsername }),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay invite returned ${res.status}`);
+	}
+}
+
+export async function revokeOrgInvite(
+	credential: string,
+	slug: string,
+	login: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}/invites/${encodeURIComponent(login)}`,
+		{ method: "DELETE", headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay revoke invite returned ${res.status}`);
+	}
+}
+
+export async function setOrgMemberRole(
+	credential: string,
+	slug: string,
+	username: string,
+	role: "owner" | "member",
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}`,
+		{
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${credential}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ role }),
+		},
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay set role returned ${res.status}`);
+	}
+}
+
+export async function removeOrgMember(
+	credential: string,
+	slug: string,
+	username: string,
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}/members/${encodeURIComponent(username)}`,
+		{ method: "DELETE", headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay remove member returned ${res.status}`);
+	}
+}
+
+export async function deleteOrg(
+	credential: string,
+	slug: string,
+): Promise<void> {
+	const res = await fetch(`${relayUrl()}/v1/orgs/${encodeURIComponent(slug)}`, {
+		method: "DELETE",
+		headers: { Authorization: `Bearer ${credential}` },
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay delete org returned ${res.status}`);
+	}
+}

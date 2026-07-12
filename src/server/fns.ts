@@ -5,18 +5,25 @@ import {
 	createApp,
 	createOrg,
 	deleteApp,
+	deleteOrg,
 	exchangeGithub,
 	fetchAllApps,
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchOrgInvites,
+	fetchOrgMembers,
 	fetchOrgs,
 	getDomain,
 	githubManifest,
+	inviteOrgMember,
 	linkApp,
 	RelayAuthError,
 	removeDomain,
+	removeOrgMember,
+	revokeOrgInvite,
 	setDomain,
+	setOrgMemberRole,
 	stopApp,
 } from "./relay";
 
@@ -223,6 +230,99 @@ export const createOrgFn = createServerFn({ method: "POST" })
 		if (!credential) throw redirect({ to: "/login" });
 		try {
 			return await createOrg(credential, name);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const getOrgMembers = createServerFn()
+	.validator((slug: string) => slug)
+	.handler(async ({ data: slug }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await fetchOrgMembers(credential, slug);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const getOrgInvites = createServerFn()
+	.validator((slug: string) => slug)
+	.handler(async ({ data: slug }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await fetchOrgInvites(credential, slug);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const inviteOrgMemberFn = createServerFn({ method: "POST" })
+	.validator((d: { slug: string; githubUsername: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await inviteOrgMember(credential, data.slug, data.githubUsername);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const revokeOrgInviteFn = createServerFn({ method: "POST" })
+	.validator((d: { slug: string; login: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await revokeOrgInvite(credential, data.slug, data.login);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const setOrgMemberRoleFn = createServerFn({ method: "POST" })
+	.validator(
+		(d: { slug: string; username: string; role: "owner" | "member" }) => d,
+	)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await setOrgMemberRole(credential, data.slug, data.username, data.role);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const removeOrgMemberFn = createServerFn({ method: "POST" })
+	.validator((d: { slug: string; username: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await removeOrgMember(credential, data.slug, data.username);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const deleteOrgFn = createServerFn({ method: "POST" })
+	.validator((slug: string) => slug)
+	.handler(async ({ data: slug }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await deleteOrg(credential, slug);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;
