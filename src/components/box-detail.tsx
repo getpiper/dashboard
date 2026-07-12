@@ -19,6 +19,9 @@ export function BoxDetail({
 					}`}
 				/>
 				<h1 className="font-mono font-semibold text-xl">{box.base}</h1>
+				<span className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2 py-0.5 text-xs text-muted-foreground">
+					{box.owner}
+				</span>
 				{box.connected && (
 					<span className="text-muted-foreground text-sm">Connected</span>
 				)}

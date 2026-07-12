@@ -1,4 +1,7 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
+import { createOrgFn } from "../server/fns";
+import { useOrgScope } from "./org-scope";
+import { OrgSwitcher } from "./org-switcher";
 import SessionControls from "./SessionControls";
 import ThemeToggle from "./ThemeToggle";
 
@@ -17,10 +20,28 @@ export default function Header({ username }: { username: string | null }) {
 				</h2>
 
 				<div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+					{username && <HeaderSwitcher />}
 					<SessionControls username={username} />
 					<ThemeToggle />
 				</div>
 			</nav>
 		</header>
+	);
+}
+
+function HeaderSwitcher() {
+	const { scope, setScope, orgs } = useOrgScope();
+	const router = useRouter();
+	return (
+		<OrgSwitcher
+			scope={scope}
+			orgs={orgs}
+			onSelect={setScope}
+			onCreate={async (name) => {
+				const org = await createOrgFn({ data: name });
+				router.invalidate();
+				return org;
+			}}
+		/>
 	);
 }

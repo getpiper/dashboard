@@ -7,7 +7,8 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import Header from "../components/Header";
-import { getSession } from "../server/fns";
+import { OrgScopeProvider } from "../components/org-scope";
+import { getOrgs, getSession } from "../server/fns";
 
 import appCss from "../styles.css?url";
 
@@ -34,18 +35,22 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
-	loader: () => getSession(),
+	loader: async () => {
+		const session = await getSession();
+		if (!session) return null;
+		return { ...session, orgs: await getOrgs() };
+	},
 	component: RootLayout,
 	shellComponent: RootDocument,
 });
 
 function RootLayout() {
-	const session = Route.useLoaderData();
+	const data = Route.useLoaderData();
 	return (
-		<>
-			<Header username={session?.username ?? null} />
+		<OrgScopeProvider username={data?.username ?? null} orgs={data?.orgs ?? []}>
+			<Header username={data?.username ?? null} />
 			<Outlet />
-		</>
+		</OrgScopeProvider>
 	);
 }
 

@@ -780,7 +780,7 @@ test("fetchOrgs maps the orgs envelope to Org[]", async () => {
 
 test("fetchOrgs raises RelayAuthError on 401", async () => {
 	globalThis.fetch = (async () =>
-		new Response("nope", { status: 401 })) as typeof fetch;
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
 	await expect(fetchOrgs("cred-1")).rejects.toBeInstanceOf(RelayAuthError);
 });
 
@@ -798,6 +798,6 @@ test("createOrg POSTs the name and maps the created org", async () => {
 
 test("createOrg throws the relay message on a collision", async () => {
 	globalThis.fetch = (async () =>
-		new Response("name taken", { status: 409 })) as typeof fetch;
+		new Response("name taken", { status: 409 })) as unknown as typeof fetch;
 	await expect(createOrg("cred-1", "Acme")).rejects.toThrow("name taken");
 });

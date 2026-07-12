@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppsHome } from "@/components/apps-home";
+import { useOrgScope } from "@/components/org-scope";
 import { RelayError } from "@/components/relay-error";
 import { getApps } from "@/server/fns";
 
@@ -11,5 +12,6 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
 	const boxes = Route.useLoaderData();
-	return <AppsHome boxes={boxes} />;
+	const { scope, username } = useOrgScope();
+	return <AppsHome boxes={boxes} scope={scope} username={username} />;
 }
