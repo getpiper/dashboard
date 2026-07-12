@@ -11,6 +11,7 @@ type OrgScope = {
 	scope: string;
 	setScope: (s: string) => void;
 	orgs: Org[];
+	invites: string[];
 	username: string | null;
 };
 
@@ -25,10 +26,12 @@ function readScopeCookie(): string {
 export function OrgScopeProvider({
 	username,
 	orgs,
+	invites,
 	children,
 }: {
 	username: string | null;
 	orgs: Org[];
+	invites: string[];
 	children: ReactNode;
 }) {
 	// Start at "personal" so server and first client render match; a mount
@@ -48,7 +51,7 @@ export function OrgScopeProvider({
 	};
 
 	return (
-		<Ctx.Provider value={{ scope, setScope, orgs, username }}>
+		<Ctx.Provider value={{ scope, setScope, orgs, invites, username }}>
 			{children}
 		</Ctx.Provider>
 	);
