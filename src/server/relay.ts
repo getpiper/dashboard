@@ -1,4 +1,4 @@
-export type Box = { agent: string; connected: boolean };
+export type Box = { agent: string; owner: string; connected: boolean };
 
 export class RelayAuthError extends Error {}
 
@@ -81,20 +81,31 @@ export async function fetchApps(
 	}));
 }
 
-export type BoxWithApps = { base: string; connected: boolean; apps: App[] };
+export type BoxWithApps = {
+	base: string;
+	owner: string;
+	connected: boolean;
+	apps: App[];
+};
 
 async function appsForBox(
 	credential: string,
 	base: string,
+	owner: string,
 	connected: boolean,
 ): Promise<BoxWithApps> {
-	if (!connected) return { base, connected: false, apps: [] };
+	if (!connected) return { base, owner, connected: false, apps: [] };
 	try {
-		return { base, connected: true, apps: await fetchApps(credential, base) };
+		return {
+			base,
+			owner,
+			connected: true,
+			apps: await fetchApps(credential, base),
+		};
 	} catch (err) {
 		// The box dropped between the liveness snapshot and this fetch.
 		if (err instanceof BoxOfflineError) {
-			return { base, connected: false, apps: [] };
+			return { base, owner, connected: false, apps: [] };
 		}
 		throw err;
 	}
@@ -103,7 +114,9 @@ async function appsForBox(
 export async function fetchAllApps(credential: string): Promise<BoxWithApps[]> {
 	const boxes = await fetchBoxes(credential);
 	return Promise.all(
-		boxes.map((box) => appsForBox(credential, box.agent, box.connected)),
+		boxes.map((box) =>
+			appsForBox(credential, box.agent, box.owner, box.connected),
+		),
 	);
 }
 
@@ -112,8 +125,13 @@ export async function fetchBox(
 	base: string,
 ): Promise<BoxWithApps> {
 	const boxes = await fetchBoxes(credential);
-	const connected = boxes.find((b) => b.agent === base)?.connected ?? false;
-	return appsForBox(credential, base, connected);
+	const match = boxes.find((b) => b.agent === base);
+	return appsForBox(
+		credential,
+		base,
+		match?.owner ?? "",
+		match?.connected ?? false,
+	);
 }
 
 export type Deployment = {

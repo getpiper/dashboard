@@ -54,8 +54,12 @@ test("fetchBoxes calls GET {relay}/agents and parses the agents envelope", async
 		seenAuth = new Headers(init?.headers).get("Authorization");
 		return Response.json({
 			agents: [
-				{ agent: "abc123-zoe.public.example", connected: true },
-				{ agent: "def456-zoe.public.example", connected: false },
+				{ agent: "abc123-zoe.public.example", owner: "zoe", connected: true },
+				{
+					agent: "def456-acme.public.example",
+					owner: "acme",
+					connected: false,
+				},
 			],
 		});
 	}) as typeof fetch;
@@ -64,8 +68,8 @@ test("fetchBoxes calls GET {relay}/agents and parses the agents envelope", async
 	expect(seenUrl).toBe("https://relay.test/agents");
 	expect<string | null>(seenAuth).toBe("Bearer cred-1");
 	expect(boxes).toEqual([
-		{ agent: "abc123-zoe.public.example", connected: true },
-		{ agent: "def456-zoe.public.example", connected: false },
+		{ agent: "abc123-zoe.public.example", owner: "zoe", connected: true },
+		{ agent: "def456-acme.public.example", owner: "acme", connected: false },
 	]);
 });
 
@@ -79,6 +83,26 @@ test("fetchBoxes throws a plain error on other failures", async () => {
 	globalThis.fetch = (async () =>
 		new Response("boom", { status: 502 })) as unknown as typeof fetch;
 	expect(fetchBoxes("cred-1")).rejects.toThrow(/502/);
+});
+
+test("fetchBox carries the box's owner through to BoxWithApps", async () => {
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		if (String(url).endsWith("/agents")) {
+			return Response.json({
+				agents: [
+					{
+						agent: "abc123-zoe.public.example",
+						owner: "zoe",
+						connected: false,
+					},
+				],
+			});
+		}
+		return Response.json([]);
+	}) as typeof fetch;
+
+	const box = await fetchBox("cred-1", "abc123-zoe.public.example");
+	expect(box.owner).toBe("zoe");
 });
 
 test("fetchApps GETs {relay}/agents/{base}/v1/apps and maps capitalized keys", async () => {
@@ -167,8 +191,8 @@ test("fetchAllApps pairs each box with its apps and skips offline boxes", async 
 	routeFetch({
 		"https://relay.test/agents": {
 			agents: [
-				{ agent: "up-zoe.public.example", connected: true },
-				{ agent: "down-zoe.public.example", connected: false },
+				{ agent: "up-zoe.public.example", owner: "zoe", connected: true },
+				{ agent: "down-zoe.public.example", owner: "zoe", connected: false },
 			],
 		},
 		"https://relay.test/agents/up-zoe.public.example/v1/apps": [
@@ -188,6 +212,7 @@ test("fetchAllApps pairs each box with its apps and skips offline boxes", async 
 	expect(boxes).toEqual([
 		{
 			base: "up-zoe.public.example",
+			owner: "zoe",
 			connected: true,
 			apps: [
 				{
@@ -201,42 +226,63 @@ test("fetchAllApps pairs each box with its apps and skips offline boxes", async 
 				},
 			],
 		},
-		{ base: "down-zoe.public.example", connected: false, apps: [] },
+		{
+			base: "down-zoe.public.example",
+			owner: "zoe",
+			connected: false,
+			apps: [],
+		},
 	]);
 });
 
 test("fetchAllApps treats a box that 503s mid-fan-out as offline", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "raced-zoe.public.example", connected: true }],
+			agents: [
+				{ agent: "raced-zoe.public.example", owner: "zoe", connected: true },
+			],
 		},
 		"https://relay.test/agents/raced-zoe.public.example/v1/apps": 503,
 	});
 
 	const boxes = await fetchAllApps("cred-1");
 	expect(boxes).toEqual([
-		{ base: "raced-zoe.public.example", connected: false, apps: [] },
+		{
+			base: "raced-zoe.public.example",
+			owner: "zoe",
+			connected: false,
+			apps: [],
+		},
 	]);
 });
 
 test("fetchAllApps treats a box that 502s mid-fan-out as offline", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "raced-zoe.public.example", connected: true }],
+			agents: [
+				{ agent: "raced-zoe.public.example", owner: "zoe", connected: true },
+			],
 		},
 		"https://relay.test/agents/raced-zoe.public.example/v1/apps": 502,
 	});
 
 	const boxes = await fetchAllApps("cred-1");
 	expect(boxes).toEqual([
-		{ base: "raced-zoe.public.example", connected: false, apps: [] },
+		{
+			base: "raced-zoe.public.example",
+			owner: "zoe",
+			connected: false,
+			apps: [],
+		},
 	]);
 });
 
 test("fetchBox returns one box with its apps", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "up-zoe.public.example", connected: true }],
+			agents: [
+				{ agent: "up-zoe.public.example", owner: "zoe", connected: true },
+			],
 		},
 		"https://relay.test/agents/up-zoe.public.example/v1/apps": [
 			{
@@ -252,19 +298,23 @@ test("fetchBox returns one box with its apps", async () => {
 
 	const box = await fetchBox("cred-1", "up-zoe.public.example");
 	expect(box.connected).toBe(true);
+	expect(box.owner).toBe("zoe");
 	expect(box.apps.map((a) => a.name)).toEqual(["api"]);
 });
 
 test("fetchBox returns an offline box with no apps when not connected", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "down-zoe.public.example", connected: false }],
+			agents: [
+				{ agent: "down-zoe.public.example", owner: "zoe", connected: false },
+			],
 		},
 	});
 
 	const box = await fetchBox("cred-1", "down-zoe.public.example");
 	expect(box).toEqual({
 		base: "down-zoe.public.example",
+		owner: "zoe",
 		connected: false,
 		apps: [],
 	});
