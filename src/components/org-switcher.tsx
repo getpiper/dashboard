@@ -101,6 +101,7 @@ export function OrgSwitcher({
 									<span className="flex gap-1">
 										<button
 											type="button"
+											aria-label={`Accept ${slug}`}
 											disabled={inviteBusy === slug}
 											onClick={() => act(slug, onAccept)}
 											className="rounded-lg border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2 py-1 text-xs"
@@ -109,6 +110,7 @@ export function OrgSwitcher({
 										</button>
 										<button
 											type="button"
+											aria-label={`Decline ${slug}`}
 											disabled={inviteBusy === slug}
 											onClick={() => act(slug, onDecline)}
 											className="rounded-lg px-2 py-1 text-muted-foreground text-xs hover:bg-[var(--chip-bg)]"
