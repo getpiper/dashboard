@@ -682,3 +682,52 @@ export async function deleteOrg(
 		throw new Error(msg || `relay delete org returned ${res.status}`);
 	}
 }
+
+export async function fetchInvites(credential: string): Promise<string[]> {
+	const res = await fetch(`${relayUrl()}/v1/invites`, {
+		headers: { Authorization: `Bearer ${credential}` },
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		throw new Error(`relay /v1/invites returned ${res.status}`);
+	}
+	const body = (await res.json()) as { invites: { org: string }[] };
+	return body.invites.map((i) => i.org);
+}
+
+async function consumeInvite(
+	credential: string,
+	slug: string,
+	action: "accept" | "decline",
+): Promise<void> {
+	const res = await fetch(
+		`${relayUrl()}/v1/invites/${encodeURIComponent(slug)}/${action}`,
+		{ method: "POST", headers: { Authorization: `Bearer ${credential}` } },
+	);
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (res.status === 404) {
+		throw new Error("invite no longer available");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay invite ${action} returned ${res.status}`);
+	}
+}
+
+export async function acceptInvite(
+	credential: string,
+	slug: string,
+): Promise<void> {
+	await consumeInvite(credential, slug, "accept");
+}
+
+export async function declineInvite(
+	credential: string,
+	slug: string,
+): Promise<void> {
+	await consumeInvite(credential, slug, "decline");
+}
