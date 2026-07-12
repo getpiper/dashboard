@@ -43,6 +43,7 @@ function OrgSettingsPage() {
 	async function exitToPersonal(act: () => Promise<unknown>) {
 		await act();
 		setScope("personal");
+		await router.invalidate();
 		await navigate({ to: "/" });
 	}
 
