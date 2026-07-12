@@ -979,7 +979,7 @@ test("fetchInvites GETs /v1/invites and maps the envelope to slugs", async () =>
 
 test("fetchInvites returns an empty array when there are none", async () => {
 	globalThis.fetch = (async () =>
-		Response.json({ invites: [] })) as typeof fetch;
+		Response.json({ invites: [] })) as unknown as typeof fetch;
 	expect(await fetchInvites("cred-1")).toEqual([]);
 });
 
