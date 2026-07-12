@@ -8,6 +8,7 @@ const orgs: Org[] = [
 	{ slug: "widgets", role: "member" },
 ];
 const noopCreate = async () => ({ slug: "x", role: "owner" as const });
+const noopManage = () => {};
 
 test("labels the active scope and lists Personal + orgs when open", () => {
 	render(
@@ -16,11 +17,12 @@ test("labels the active scope and lists Personal + orgs when open", () => {
 			orgs={orgs}
 			onSelect={() => {}}
 			onCreate={noopCreate}
+			onManage={noopManage}
 		/>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: "Personal" }));
-	expect(screen.getByRole("button", { name: /acme/ })).toBeTruthy();
-	expect(screen.getByRole("button", { name: /widgets/ })).toBeTruthy();
+	expect(screen.getByRole("button", { name: /^acme/ })).toBeTruthy();
+	expect(screen.getByRole("button", { name: /^widgets/ })).toBeTruthy();
 });
 
 test("selecting an org calls onSelect with its slug", () => {
@@ -33,11 +35,30 @@ test("selecting an org calls onSelect with its slug", () => {
 				picked = s;
 			}}
 			onCreate={noopCreate}
+			onManage={noopManage}
 		/>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: "Personal" }));
-	fireEvent.click(screen.getByRole("button", { name: /acme/ }));
+	fireEvent.click(screen.getByRole("button", { name: /^acme/ }));
 	expect(picked).toBe("acme");
+});
+
+test("the gear calls onManage with the org slug", () => {
+	let managed = "";
+	render(
+		<OrgSwitcher
+			scope="personal"
+			orgs={orgs}
+			onSelect={() => {}}
+			onCreate={noopCreate}
+			onManage={(s) => {
+				managed = s;
+			}}
+		/>,
+	);
+	fireEvent.click(screen.getByRole("button", { name: "Personal" }));
+	fireEvent.click(screen.getByRole("button", { name: /manage widgets/i }));
+	expect(managed).toBe("widgets");
 });
 
 test("creating an org calls onCreate then selects the new org", async () => {
@@ -54,6 +75,7 @@ test("creating an org calls onCreate then selects the new org", async () => {
 				createdWith = name;
 				return { slug: "neworg", role: "owner" };
 			}}
+			onManage={noopManage}
 		/>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: "Personal" }));
@@ -75,6 +97,7 @@ test("a failed create surfaces the error message", async () => {
 			onCreate={async () => {
 				throw new Error("name taken");
 			}}
+			onManage={noopManage}
 		/>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: "Personal" }));

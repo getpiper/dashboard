@@ -42,6 +42,9 @@ function HeaderSwitcher() {
 				router.invalidate();
 				return org;
 			}}
+			onManage={(slug) =>
+				router.navigate({ to: "/orgs/$slug/settings", params: { slug } })
+			}
 		/>
 	);
 }
