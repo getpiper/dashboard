@@ -8,7 +8,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import Header from "../components/Header";
 import { OrgScopeProvider } from "../components/org-scope";
-import { getOrgs, getSession } from "../server/fns";
+import { getInvites, getOrgs, getSession } from "../server/fns";
 
 import appCss from "../styles.css?url";
 
@@ -38,7 +38,8 @@ export const Route = createRootRoute({
 	loader: async () => {
 		const session = await getSession();
 		if (!session) return null;
-		return { ...session, orgs: await getOrgs() };
+		const [orgs, invites] = await Promise.all([getOrgs(), getInvites()]);
+		return { ...session, orgs, invites };
 	},
 	component: RootLayout,
 	shellComponent: RootDocument,
@@ -47,7 +48,11 @@ export const Route = createRootRoute({
 function RootLayout() {
 	const data = Route.useLoaderData();
 	return (
-		<OrgScopeProvider username={data?.username ?? null} orgs={data?.orgs ?? []}>
+		<OrgScopeProvider
+			username={data?.username ?? null}
+			orgs={data?.orgs ?? []}
+			invites={data?.invites ?? []}
+		>
 			<Header username={data?.username ?? null} />
 			<Outlet />
 		</OrgScopeProvider>
