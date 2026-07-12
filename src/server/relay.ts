@@ -494,3 +494,42 @@ export async function removeDomain(
 		throw new Error(msg || `relay remove domain returned ${res.status}`);
 	}
 }
+
+export type Org = { slug: string; role: "owner" | "member" };
+
+export async function fetchOrgs(credential: string): Promise<Org[]> {
+	const res = await fetch(`${relayUrl()}/v1/orgs`, {
+		headers: { Authorization: `Bearer ${credential}` },
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		throw new Error(`relay /v1/orgs returned ${res.status}`);
+	}
+	const body = (await res.json()) as { orgs: { org: string; role: string }[] };
+	return body.orgs.map((o) => ({ slug: o.org, role: o.role as Org["role"] }));
+}
+
+export async function createOrg(
+	credential: string,
+	name: string,
+): Promise<Org> {
+	const res = await fetch(`${relayUrl()}/v1/orgs`, {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${credential}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ name }),
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay create org returned ${res.status}`);
+	}
+	const body = (await res.json()) as { org: string; role: string };
+	return { slug: body.org, role: body.role as Org["role"] };
+}

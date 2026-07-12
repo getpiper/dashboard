@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
 	BoxOfflineError,
 	createApp,
+	createOrg,
 	deleteApp,
 	exchangeGithub,
 	fetchAllApps,
@@ -10,6 +11,7 @@ import {
 	fetchBoxes,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchOrgs,
 	getDomain,
 	githubManifest,
 	linkApp,
@@ -754,4 +756,48 @@ test("removeDomain throws RelayAuthError on 401 and BoxOfflineError on 502", asy
 	globalThis.fetch = (async () =>
 		new Response("bad gateway", { status: 502 })) as unknown as typeof fetch;
 	expect(removeDomain("cred-1", "b")).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
+test("fetchOrgs maps the orgs envelope to Org[]", async () => {
+	let seenUrl = "";
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		seenUrl = String(url);
+		return Response.json({
+			orgs: [
+				{ org: "acme", role: "owner" },
+				{ org: "widgets", role: "member" },
+			],
+		});
+	}) as typeof fetch;
+
+	const orgs = await fetchOrgs("cred-1");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs");
+	expect(orgs).toEqual([
+		{ slug: "acme", role: "owner" },
+		{ slug: "widgets", role: "member" },
+	]);
+});
+
+test("fetchOrgs raises RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as typeof fetch;
+	await expect(fetchOrgs("cred-1")).rejects.toBeInstanceOf(RelayAuthError);
+});
+
+test("createOrg POSTs the name and maps the created org", async () => {
+	let seenBody = "";
+	globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+		seenBody = String(init?.body);
+		return Response.json({ org: "acme", role: "owner" });
+	}) as typeof fetch;
+
+	const org = await createOrg("cred-1", "Acme");
+	expect(JSON.parse(seenBody)).toEqual({ name: "Acme" });
+	expect(org).toEqual({ slug: "acme", role: "owner" });
+});
+
+test("createOrg throws the relay message on a collision", async () => {
+	globalThis.fetch = (async () =>
+		new Response("name taken", { status: 409 })) as typeof fetch;
+	await expect(createOrg("cred-1", "Acme")).rejects.toThrow("name taken");
 });
