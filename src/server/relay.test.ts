@@ -4,6 +4,7 @@ import {
 	createApp,
 	createOrg,
 	deleteApp,
+	deleteOrg,
 	exchangeGithub,
 	fetchAllApps,
 	fetchApps,
@@ -11,14 +12,20 @@ import {
 	fetchBoxes,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchOrgInvites,
+	fetchOrgMembers,
 	fetchOrgs,
 	getDomain,
 	githubManifest,
+	inviteOrgMember,
 	linkApp,
 	RelayAuthError,
 	relayUrl,
 	removeDomain,
+	removeOrgMember,
+	revokeOrgInvite,
 	setDomain,
+	setOrgMemberRole,
 	stopApp,
 } from "./relay";
 
@@ -800,4 +807,154 @@ test("createOrg throws the relay message on a collision", async () => {
 	globalThis.fetch = (async () =>
 		new Response("name taken", { status: 409 })) as unknown as typeof fetch;
 	await expect(createOrg("cred-1", "Acme")).rejects.toThrow("name taken");
+});
+
+test("fetchOrgMembers GETs the members path and parses the envelope", async () => {
+	let seenUrl = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return Response.json({
+			members: [
+				{ username: "zoe", role: "owner" },
+				{ username: "max", role: "member" },
+			],
+		});
+	}) as typeof fetch;
+
+	const members = await fetchOrgMembers("cred-1", "acme");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme/members");
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+	expect(members).toEqual([
+		{ username: "zoe", role: "owner" },
+		{ username: "max", role: "member" },
+	]);
+});
+
+test("fetchOrgMembers throws RelayAuthError on 401 and the body message otherwise", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	expect(fetchOrgMembers("bad", "acme")).rejects.toBeInstanceOf(RelayAuthError);
+	globalThis.fetch = (async () =>
+		new Response("no such org", { status: 404 })) as unknown as typeof fetch;
+	expect(fetchOrgMembers("cred-1", "gone")).rejects.toThrow(/no such org/);
+});
+
+test("fetchOrgInvites GETs the invites path and returns the string list", async () => {
+	let seenUrl = "";
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		seenUrl = String(url);
+		return Response.json({ invites: ["octocat", "hubot"] });
+	}) as typeof fetch;
+
+	const invites = await fetchOrgInvites("cred-1", "acme");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme/invites");
+	expect(invites).toEqual(["octocat", "hubot"]);
+});
+
+test("inviteOrgMember POSTs github_username and surfaces the 409 message", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	let seenBody = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		seenBody = String(init?.body);
+		return Response.json({ invited: "octocat" });
+	}) as typeof fetch;
+
+	await inviteOrgMember("cred-1", "acme", "octocat");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme/invites");
+	expect(seenMethod).toBe("POST");
+	expect(JSON.parse(seenBody)).toEqual({ github_username: "octocat" });
+
+	globalThis.fetch = (async () =>
+		new Response("already a member", {
+			status: 409,
+		})) as unknown as typeof fetch;
+	expect(inviteOrgMember("cred-1", "acme", "zoe")).rejects.toThrow(
+		/already a member/,
+	);
+});
+
+test("revokeOrgInvite DELETEs the invite path", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		return Response.json({ revoked: "octocat" });
+	}) as typeof fetch;
+
+	await revokeOrgInvite("cred-1", "acme", "octocat");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme/invites/octocat");
+	expect(seenMethod).toBe("DELETE");
+});
+
+test("setOrgMemberRole PUTs the role and surfaces the last-owner 409", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	let seenBody = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		seenBody = String(init?.body);
+		return Response.json({ username: "max", role: "owner" });
+	}) as typeof fetch;
+
+	await setOrgMemberRole("cred-1", "acme", "max", "owner");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme/members/max");
+	expect(seenMethod).toBe("PUT");
+	expect(JSON.parse(seenBody)).toEqual({ role: "owner" });
+
+	globalThis.fetch = (async () =>
+		new Response("an org must keep at least one owner", {
+			status: 409,
+		})) as unknown as typeof fetch;
+	expect(setOrgMemberRole("cred-1", "acme", "zoe", "member")).rejects.toThrow(
+		/at least one owner/,
+	);
+});
+
+test("removeOrgMember DELETEs the member path and surfaces the 409", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		return Response.json({ removed: "max" });
+	}) as typeof fetch;
+
+	await removeOrgMember("cred-1", "acme", "max");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme/members/max");
+	expect(seenMethod).toBe("DELETE");
+
+	globalThis.fetch = (async () =>
+		new Response("an org must keep at least one owner", {
+			status: 409,
+		})) as unknown as typeof fetch;
+	expect(removeOrgMember("cred-1", "acme", "zoe")).rejects.toThrow(
+		/at least one owner/,
+	);
+});
+
+test("deleteOrg DELETEs the org and surfaces the has-agents 409", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		return Response.json({ deleted: "acme" });
+	}) as typeof fetch;
+
+	await deleteOrg("cred-1", "acme");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs/acme");
+	expect(seenMethod).toBe("DELETE");
+
+	globalThis.fetch = (async () =>
+		new Response("org still owns agents", {
+			status: 409,
+		})) as unknown as typeof fetch;
+	expect(deleteOrg("cred-1", "acme")).rejects.toThrow(/still owns agents/);
 });
