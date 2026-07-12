@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
+	acceptInvite,
 	BoxOfflineError,
 	createApp,
 	createOrg,
+	declineInvite,
 	deleteApp,
 	deleteOrg,
 	exchangeGithub,
@@ -12,6 +14,7 @@ import {
 	fetchBoxes,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchInvites,
 	fetchOrgInvites,
 	fetchOrgMembers,
 	fetchOrgs,
@@ -957,4 +960,80 @@ test("deleteOrg DELETEs the org and surfaces the has-agents 409", async () => {
 			status: 409,
 		})) as unknown as typeof fetch;
 	expect(deleteOrg("cred-1", "acme")).rejects.toThrow(/still owns agents/);
+});
+
+test("fetchInvites GETs /v1/invites and maps the envelope to slugs", async () => {
+	let seenUrl = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return Response.json({ invites: [{ org: "acme" }, { org: "widgets" }] });
+	}) as typeof fetch;
+
+	const invites = await fetchInvites("cred-1");
+	expect(seenUrl).toBe("https://relay.test/v1/invites");
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+	expect(invites).toEqual(["acme", "widgets"]);
+});
+
+test("fetchInvites returns an empty array when there are none", async () => {
+	globalThis.fetch = (async () =>
+		Response.json({ invites: [] })) as unknown as typeof fetch;
+	expect(await fetchInvites("cred-1")).toEqual([]);
+});
+
+test("fetchInvites raises RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	await expect(fetchInvites("cred-1")).rejects.toBeInstanceOf(RelayAuthError);
+});
+
+test("acceptInvite POSTs the accept path and resolves on 200", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		return Response.json({ accepted: "acme" });
+	}) as typeof fetch;
+
+	await acceptInvite("cred-1", "acme");
+	expect(seenUrl).toBe("https://relay.test/v1/invites/acme/accept");
+	expect(seenMethod).toBe("POST");
+});
+
+test("acceptInvite throws a clean message when the invite is gone (404)", async () => {
+	globalThis.fetch = (async () =>
+		new Response("", { status: 404 })) as unknown as typeof fetch;
+	await expect(acceptInvite("cred-1", "acme")).rejects.toThrow(
+		/no longer available/i,
+	);
+});
+
+test("acceptInvite raises RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	await expect(acceptInvite("cred-1", "acme")).rejects.toBeInstanceOf(
+		RelayAuthError,
+	);
+});
+
+test("declineInvite POSTs the decline path and resolves on 200", async () => {
+	let seenUrl = "";
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		seenUrl = String(url);
+		return Response.json({ declined: "acme" });
+	}) as typeof fetch;
+
+	await declineInvite("cred-1", "acme");
+	expect(seenUrl).toBe("https://relay.test/v1/invites/acme/decline");
+});
+
+test("declineInvite throws a clean message when the invite is gone (404)", async () => {
+	globalThis.fetch = (async () =>
+		new Response("", { status: 404 })) as unknown as typeof fetch;
+	await expect(declineInvite("cred-1", "acme")).rejects.toThrow(
+		/no longer available/i,
+	);
 });

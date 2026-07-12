@@ -2,8 +2,10 @@ import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 import {
+	acceptInvite,
 	createApp,
 	createOrg,
+	declineInvite,
 	deleteApp,
 	deleteOrg,
 	exchangeGithub,
@@ -11,6 +13,7 @@ import {
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchInvites,
 	fetchOrgInvites,
 	fetchOrgMembers,
 	fetchOrgs,
@@ -323,6 +326,43 @@ export const deleteOrgFn = createServerFn({ method: "POST" })
 		if (!credential) throw redirect({ to: "/login" });
 		try {
 			await deleteOrg(credential, slug);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const getInvites = createServerFn().handler(async () => {
+	const credential = getCookie("piper_session");
+	if (!credential) throw redirect({ to: "/login" });
+	try {
+		return await fetchInvites(credential);
+	} catch (err) {
+		if (err instanceof RelayAuthError) dropSessionAndRedirect();
+		throw err;
+	}
+});
+
+export const acceptInviteFn = createServerFn({ method: "POST" })
+	.validator((slug: string) => slug)
+	.handler(async ({ data: slug }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await acceptInvite(credential, slug);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const declineInviteFn = createServerFn({ method: "POST" })
+	.validator((slug: string) => slug)
+	.handler(async ({ data: slug }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await declineInvite(credential, slug);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;

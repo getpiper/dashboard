@@ -23,7 +23,7 @@ const orgs: Org[] = [{ slug: "acme", role: "owner" }];
 
 test("defaults to personal scope", () => {
 	render(
-		<OrgScopeProvider username="zoe" orgs={orgs}>
+		<OrgScopeProvider username="zoe" orgs={orgs} invites={[]}>
 			<Probe />
 		</OrgScopeProvider>,
 	);
@@ -32,7 +32,7 @@ test("defaults to personal scope", () => {
 
 test("setScope updates scope and persists the cookie", async () => {
 	render(
-		<OrgScopeProvider username="zoe" orgs={orgs}>
+		<OrgScopeProvider username="zoe" orgs={orgs} invites={[]}>
 			<Probe />
 		</OrgScopeProvider>,
 	);
@@ -44,7 +44,7 @@ test("setScope updates scope and persists the cookie", async () => {
 test("a persisted org the caller no longer belongs to falls back to personal", async () => {
 	document.cookie = "piper_scope=ghost; Path=/";
 	render(
-		<OrgScopeProvider username="zoe" orgs={orgs}>
+		<OrgScopeProvider username="zoe" orgs={orgs} invites={[]}>
 			<Probe />
 		</OrgScopeProvider>,
 	);
@@ -56,7 +56,7 @@ test("a persisted org the caller no longer belongs to falls back to personal", a
 test("a persisted org the caller still belongs to is restored", async () => {
 	document.cookie = "piper_scope=acme; Path=/";
 	render(
-		<OrgScopeProvider username="zoe" orgs={orgs}>
+		<OrgScopeProvider username="zoe" orgs={orgs} invites={[]}>
 			<Probe />
 		</OrgScopeProvider>,
 	);
