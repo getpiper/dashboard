@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
 	BoxOfflineError,
 	createApp,
+	createOrg,
 	deleteApp,
 	exchangeGithub,
 	fetchAllApps,
@@ -10,6 +11,7 @@ import {
 	fetchBoxes,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchOrgs,
 	getDomain,
 	githubManifest,
 	linkApp,
@@ -54,8 +56,12 @@ test("fetchBoxes calls GET {relay}/agents and parses the agents envelope", async
 		seenAuth = new Headers(init?.headers).get("Authorization");
 		return Response.json({
 			agents: [
-				{ agent: "abc123-zoe.public.example", connected: true },
-				{ agent: "def456-zoe.public.example", connected: false },
+				{ agent: "abc123-zoe.public.example", owner: "zoe", connected: true },
+				{
+					agent: "def456-acme.public.example",
+					owner: "acme",
+					connected: false,
+				},
 			],
 		});
 	}) as typeof fetch;
@@ -64,8 +70,8 @@ test("fetchBoxes calls GET {relay}/agents and parses the agents envelope", async
 	expect(seenUrl).toBe("https://relay.test/agents");
 	expect<string | null>(seenAuth).toBe("Bearer cred-1");
 	expect(boxes).toEqual([
-		{ agent: "abc123-zoe.public.example", connected: true },
-		{ agent: "def456-zoe.public.example", connected: false },
+		{ agent: "abc123-zoe.public.example", owner: "zoe", connected: true },
+		{ agent: "def456-acme.public.example", owner: "acme", connected: false },
 	]);
 });
 
@@ -79,6 +85,26 @@ test("fetchBoxes throws a plain error on other failures", async () => {
 	globalThis.fetch = (async () =>
 		new Response("boom", { status: 502 })) as unknown as typeof fetch;
 	expect(fetchBoxes("cred-1")).rejects.toThrow(/502/);
+});
+
+test("fetchBox carries the box's owner through to BoxWithApps", async () => {
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		if (String(url).endsWith("/agents")) {
+			return Response.json({
+				agents: [
+					{
+						agent: "abc123-zoe.public.example",
+						owner: "zoe",
+						connected: false,
+					},
+				],
+			});
+		}
+		return Response.json([]);
+	}) as typeof fetch;
+
+	const box = await fetchBox("cred-1", "abc123-zoe.public.example");
+	expect(box.owner).toBe("zoe");
 });
 
 test("fetchApps GETs {relay}/agents/{base}/v1/apps and maps capitalized keys", async () => {
@@ -167,8 +193,8 @@ test("fetchAllApps pairs each box with its apps and skips offline boxes", async 
 	routeFetch({
 		"https://relay.test/agents": {
 			agents: [
-				{ agent: "up-zoe.public.example", connected: true },
-				{ agent: "down-zoe.public.example", connected: false },
+				{ agent: "up-zoe.public.example", owner: "zoe", connected: true },
+				{ agent: "down-zoe.public.example", owner: "zoe", connected: false },
 			],
 		},
 		"https://relay.test/agents/up-zoe.public.example/v1/apps": [
@@ -188,6 +214,7 @@ test("fetchAllApps pairs each box with its apps and skips offline boxes", async 
 	expect(boxes).toEqual([
 		{
 			base: "up-zoe.public.example",
+			owner: "zoe",
 			connected: true,
 			apps: [
 				{
@@ -201,42 +228,63 @@ test("fetchAllApps pairs each box with its apps and skips offline boxes", async 
 				},
 			],
 		},
-		{ base: "down-zoe.public.example", connected: false, apps: [] },
+		{
+			base: "down-zoe.public.example",
+			owner: "zoe",
+			connected: false,
+			apps: [],
+		},
 	]);
 });
 
 test("fetchAllApps treats a box that 503s mid-fan-out as offline", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "raced-zoe.public.example", connected: true }],
+			agents: [
+				{ agent: "raced-zoe.public.example", owner: "zoe", connected: true },
+			],
 		},
 		"https://relay.test/agents/raced-zoe.public.example/v1/apps": 503,
 	});
 
 	const boxes = await fetchAllApps("cred-1");
 	expect(boxes).toEqual([
-		{ base: "raced-zoe.public.example", connected: false, apps: [] },
+		{
+			base: "raced-zoe.public.example",
+			owner: "zoe",
+			connected: false,
+			apps: [],
+		},
 	]);
 });
 
 test("fetchAllApps treats a box that 502s mid-fan-out as offline", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "raced-zoe.public.example", connected: true }],
+			agents: [
+				{ agent: "raced-zoe.public.example", owner: "zoe", connected: true },
+			],
 		},
 		"https://relay.test/agents/raced-zoe.public.example/v1/apps": 502,
 	});
 
 	const boxes = await fetchAllApps("cred-1");
 	expect(boxes).toEqual([
-		{ base: "raced-zoe.public.example", connected: false, apps: [] },
+		{
+			base: "raced-zoe.public.example",
+			owner: "zoe",
+			connected: false,
+			apps: [],
+		},
 	]);
 });
 
 test("fetchBox returns one box with its apps", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "up-zoe.public.example", connected: true }],
+			agents: [
+				{ agent: "up-zoe.public.example", owner: "zoe", connected: true },
+			],
 		},
 		"https://relay.test/agents/up-zoe.public.example/v1/apps": [
 			{
@@ -252,19 +300,23 @@ test("fetchBox returns one box with its apps", async () => {
 
 	const box = await fetchBox("cred-1", "up-zoe.public.example");
 	expect(box.connected).toBe(true);
+	expect(box.owner).toBe("zoe");
 	expect(box.apps.map((a) => a.name)).toEqual(["api"]);
 });
 
 test("fetchBox returns an offline box with no apps when not connected", async () => {
 	routeFetch({
 		"https://relay.test/agents": {
-			agents: [{ agent: "down-zoe.public.example", connected: false }],
+			agents: [
+				{ agent: "down-zoe.public.example", owner: "zoe", connected: false },
+			],
 		},
 	});
 
 	const box = await fetchBox("cred-1", "down-zoe.public.example");
 	expect(box).toEqual({
 		base: "down-zoe.public.example",
+		owner: "zoe",
 		connected: false,
 		apps: [],
 	});
@@ -704,4 +756,48 @@ test("removeDomain throws RelayAuthError on 401 and BoxOfflineError on 502", asy
 	globalThis.fetch = (async () =>
 		new Response("bad gateway", { status: 502 })) as unknown as typeof fetch;
 	expect(removeDomain("cred-1", "b")).rejects.toBeInstanceOf(BoxOfflineError);
+});
+
+test("fetchOrgs maps the orgs envelope to Org[]", async () => {
+	let seenUrl = "";
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		seenUrl = String(url);
+		return Response.json({
+			orgs: [
+				{ org: "acme", role: "owner" },
+				{ org: "widgets", role: "member" },
+			],
+		});
+	}) as typeof fetch;
+
+	const orgs = await fetchOrgs("cred-1");
+	expect(seenUrl).toBe("https://relay.test/v1/orgs");
+	expect(orgs).toEqual([
+		{ slug: "acme", role: "owner" },
+		{ slug: "widgets", role: "member" },
+	]);
+});
+
+test("fetchOrgs raises RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	await expect(fetchOrgs("cred-1")).rejects.toBeInstanceOf(RelayAuthError);
+});
+
+test("createOrg POSTs the name and maps the created org", async () => {
+	let seenBody = "";
+	globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+		seenBody = String(init?.body);
+		return Response.json({ org: "acme", role: "owner" });
+	}) as typeof fetch;
+
+	const org = await createOrg("cred-1", "Acme");
+	expect(JSON.parse(seenBody)).toEqual({ name: "Acme" });
+	expect(org).toEqual({ slug: "acme", role: "owner" });
+});
+
+test("createOrg throws the relay message on a collision", async () => {
+	globalThis.fetch = (async () =>
+		new Response("name taken", { status: 409 })) as unknown as typeof fetch;
+	await expect(createOrg("cred-1", "Acme")).rejects.toThrow("name taken");
 });

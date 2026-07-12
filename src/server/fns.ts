@@ -3,12 +3,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 import {
 	createApp,
+	createOrg,
 	deleteApp,
 	exchangeGithub,
 	fetchAllApps,
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchOrgs,
 	getDomain,
 	githubManifest,
 	linkApp,
@@ -197,6 +199,30 @@ export const removeDomainFn = createServerFn({ method: "POST" })
 		if (!credential) throw redirect({ to: "/login" });
 		try {
 			await removeDomain(credential, base);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const getOrgs = createServerFn().handler(async () => {
+	const credential = getCookie("piper_session");
+	if (!credential) throw redirect({ to: "/login" });
+	try {
+		return await fetchOrgs(credential);
+	} catch (err) {
+		if (err instanceof RelayAuthError) dropSessionAndRedirect();
+		throw err;
+	}
+});
+
+export const createOrgFn = createServerFn({ method: "POST" })
+	.validator((name: string) => name)
+	.handler(async ({ data: name }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await createOrg(credential, name);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;

@@ -1,4 +1,4 @@
-export type Box = { agent: string; connected: boolean };
+export type Box = { agent: string; owner: string; connected: boolean };
 
 export class RelayAuthError extends Error {}
 
@@ -81,20 +81,31 @@ export async function fetchApps(
 	}));
 }
 
-export type BoxWithApps = { base: string; connected: boolean; apps: App[] };
+export type BoxWithApps = {
+	base: string;
+	owner: string;
+	connected: boolean;
+	apps: App[];
+};
 
 async function appsForBox(
 	credential: string,
 	base: string,
+	owner: string,
 	connected: boolean,
 ): Promise<BoxWithApps> {
-	if (!connected) return { base, connected: false, apps: [] };
+	if (!connected) return { base, owner, connected: false, apps: [] };
 	try {
-		return { base, connected: true, apps: await fetchApps(credential, base) };
+		return {
+			base,
+			owner,
+			connected: true,
+			apps: await fetchApps(credential, base),
+		};
 	} catch (err) {
 		// The box dropped between the liveness snapshot and this fetch.
 		if (err instanceof BoxOfflineError) {
-			return { base, connected: false, apps: [] };
+			return { base, owner, connected: false, apps: [] };
 		}
 		throw err;
 	}
@@ -103,7 +114,9 @@ async function appsForBox(
 export async function fetchAllApps(credential: string): Promise<BoxWithApps[]> {
 	const boxes = await fetchBoxes(credential);
 	return Promise.all(
-		boxes.map((box) => appsForBox(credential, box.agent, box.connected)),
+		boxes.map((box) =>
+			appsForBox(credential, box.agent, box.owner, box.connected),
+		),
 	);
 }
 
@@ -112,8 +125,13 @@ export async function fetchBox(
 	base: string,
 ): Promise<BoxWithApps> {
 	const boxes = await fetchBoxes(credential);
-	const connected = boxes.find((b) => b.agent === base)?.connected ?? false;
-	return appsForBox(credential, base, connected);
+	const match = boxes.find((b) => b.agent === base);
+	return appsForBox(
+		credential,
+		base,
+		match?.owner ?? "",
+		match?.connected ?? false,
+	);
 }
 
 export type Deployment = {
@@ -475,4 +493,43 @@ export async function removeDomain(
 		const msg = (await res.text()).trim();
 		throw new Error(msg || `relay remove domain returned ${res.status}`);
 	}
+}
+
+export type Org = { slug: string; role: "owner" | "member" };
+
+export async function fetchOrgs(credential: string): Promise<Org[]> {
+	const res = await fetch(`${relayUrl()}/v1/orgs`, {
+		headers: { Authorization: `Bearer ${credential}` },
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		throw new Error(`relay /v1/orgs returned ${res.status}`);
+	}
+	const body = (await res.json()) as { orgs: { org: string; role: string }[] };
+	return body.orgs.map((o) => ({ slug: o.org, role: o.role as Org["role"] }));
+}
+
+export async function createOrg(
+	credential: string,
+	name: string,
+): Promise<Org> {
+	const res = await fetch(`${relayUrl()}/v1/orgs`, {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${credential}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ name }),
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay create org returned ${res.status}`);
+	}
+	const body = (await res.json()) as { org: string; role: string };
+	return { slug: body.org, role: body.role as Org["role"] };
 }

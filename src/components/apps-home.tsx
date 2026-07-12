@@ -3,22 +3,43 @@ import { relativeTime } from "@/lib/relative-time";
 import type { BoxWithApps } from "@/server/relay";
 import { StatusBadge } from "./status-badge";
 
-export function AppsHome({ boxes }: { boxes: BoxWithApps[] }) {
-	if (boxes.length === 0) {
+export function AppsHome({
+	boxes,
+	username,
+	scope,
+}: {
+	boxes: BoxWithApps[];
+	username: string | null;
+	scope: string;
+}) {
+	const scoped = boxes.filter((b) =>
+		scope === "personal" ? b.owner === username : b.owner === scope,
+	);
+
+	if (scoped.length === 0) {
 		return (
 			<main className="page-wrap flex flex-col gap-4 px-4 py-8">
 				<div className="island-kicker">Your hardware</div>
 				<h1 className="font-semibold text-2xl text-[var(--sea-ink)]">Boxes</h1>
 				<p className="text-muted-foreground">
-					No boxes yet — run <code>piper connect</code> on your hardware to
-					enroll one.
+					{scope === "personal" ? (
+						<>
+							No boxes yet — run <code>piper connect</code> on your hardware to
+							enroll one.
+						</>
+					) : (
+						<>
+							No boxes in this org yet — enroll one with{" "}
+							<code>piper enroll --org {scope}</code>.
+						</>
+					)}
 				</p>
 			</main>
 		);
 	}
 
-	const onlineCount = boxes.filter((b) => b.connected).length;
-	const liveAppCount = boxes.reduce(
+	const onlineCount = scoped.filter((b) => b.connected).length;
+	const liveAppCount = scoped.reduce(
 		(n, b) => n + b.apps.filter((a) => a.status === "running").length,
 		0,
 	);
@@ -34,7 +55,7 @@ export function AppsHome({ boxes }: { boxes: BoxWithApps[] }) {
 				</div>
 				<div className="flex flex-wrap gap-2">
 					<span className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1 font-semibold text-sm text-[var(--sea-ink)]">
-						{boxes.length} boxes · {onlineCount} online
+						{scoped.length} boxes · {onlineCount} online
 					</span>
 					<span className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1 font-semibold text-sm text-[var(--sea-ink)]">
 						{liveAppCount} apps live
@@ -43,7 +64,7 @@ export function AppsHome({ boxes }: { boxes: BoxWithApps[] }) {
 			</div>
 
 			<div className="flex flex-col gap-3.5">
-				{boxes.map((box) => (
+				{scoped.map((box) => (
 					<section
 						key={box.base}
 						className="feature-card flex flex-col gap-3.5 rounded-2xl border border-[var(--line)] p-5"

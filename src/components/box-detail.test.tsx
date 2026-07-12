@@ -22,6 +22,7 @@ async function renderInRouter(box: BoxWithApps) {
 test("shows the box as connected and lists its apps with status", async () => {
 	await renderInRouter({
 		base: "up-zoe.public.example",
+		owner: "zoe",
 		connected: true,
 		apps: [
 			{
@@ -44,6 +45,7 @@ test("shows the box as connected and lists its apps with status", async () => {
 test("links each app to its detail page", async () => {
 	await renderInRouter({
 		base: "up-zoe.public.example",
+		owner: "zoe",
 		connected: true,
 		apps: [
 			{
@@ -66,6 +68,7 @@ test("links each app to its detail page", async () => {
 test("shows an offline box with no apps", async () => {
 	await renderInRouter({
 		base: "down-zoe.public.example",
+		owner: "zoe",
 		connected: false,
 		apps: [],
 	});
@@ -76,9 +79,20 @@ test("shows an offline box with no apps", async () => {
 test("offers a New project link to the import route", async () => {
 	await renderInRouter({
 		base: "up-zoe.public.example",
+		owner: "zoe",
 		connected: true,
 		apps: [],
 	});
 	const link = screen.getByRole("link", { name: /new project/i });
 	expect(link.getAttribute("href")).toBe("/boxes/up-zoe.public.example/import");
+});
+
+test("shows the owning org slug as a badge", async () => {
+	await renderInRouter({
+		base: "abc-acme",
+		owner: "acme",
+		connected: true,
+		apps: [],
+	});
+	expect(screen.getByText("acme")).toBeTruthy();
 });
