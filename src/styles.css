@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
@@ -60,6 +61,12 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.871 0.006 286.286);
+
+  /* Terminal design system — status palette (constant across light/dark) */
+  --status-ok: #4ade80;
+  --status-warn: #fb923c;
+  --status-danger: #f87171;
+  --status-idle: #6a6a70;
 }
 
 .dark {
@@ -143,6 +150,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-status-ok: var(--status-ok);
+  --color-status-warn: var(--status-warn);
+  --color-status-danger: var(--status-danger);
+  --color-status-idle: var(--status-idle);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -155,6 +166,40 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/*
+ * Terminal design system scope. Remaps shadcn semantic tokens to the
+ * amber-on-dark terminal palette. Opt in by adding class="terminal" to a
+ * container; the rest of the app (coastal) is unaffected until cutover.
+ * Spec: docs/superpowers/specs/2026-07-15-design-philosophy-design.md
+ */
+.terminal {
+	--background: #0b0b0d;
+	--foreground: #f2f2f4;
+	--card: #0e0e11;
+	--card-foreground: #f2f2f4;
+	--popover: #0e0e11;
+	--popover-foreground: #f2f2f4;
+	--primary: #ffb454; /* amber — brand / interactive only */
+	--primary-foreground: #0a0a0c;
+	--secondary: #1a1a1e;
+	--secondary-foreground: #f2f2f4;
+	--muted: #1a1a1e;
+	--muted-foreground: #9a9aa0;
+	--accent: #1a1a1e; /* shadcn subtle hover — NOT the brand amber */
+	--accent-foreground: #f2f2f4;
+	--destructive: #f87171;
+	--destructive-foreground: #0a0a0c;
+	--border: #2f2f36;
+	--input: #2f2f36;
+	--ring: #ffb454;
+	--radius: 2px;
+	--font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+	background-color: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-mono);
 }
 
 html,
