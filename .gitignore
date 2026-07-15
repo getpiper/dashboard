@@ -12,3 +12,6 @@ dist-ssr
 __unconfig*
 todos.json
 .superpowers
+
+# brainstorming visual-companion mockups
+.superpowers/
