@@ -67,7 +67,6 @@
   --status-warn: #fb923c;
   --status-danger: #f87171;
   --status-idle: #6a6a70;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 .dark {
@@ -196,6 +195,7 @@
 	--input: #2f2f36;
 	--ring: #ffb454;
 	--radius: 2px;
+	--font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
 	background-color: var(--background);
 	color: var(--foreground);
