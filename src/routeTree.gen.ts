@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UiRouteImport } from './routes/ui'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BoxesBaseRouteImport } from './routes/boxes/$base'
@@ -20,6 +21,11 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as BoxesBaseAppsAppRouteImport } from './routes/boxes/$base_.apps.$app'
 
+const UiRoute = UiRouteImport.update({
+  id: '/ui',
+  path: '/ui',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -74,6 +80,7 @@ const BoxesBaseAppsAppRoute = BoxesBaseAppsAppRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/ui': typeof UiRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/boxes/$base': typeof BoxesBaseRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/ui': typeof UiRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/boxes/$base': typeof BoxesBaseRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/ui': typeof UiRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/boxes/$base': typeof BoxesBaseRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/ui'
     | '/auth/callback'
     | '/boxes/$base'
     | '/api/auth/login'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/ui'
     | '/auth/callback'
     | '/boxes/$base'
     | '/api/auth/login'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/ui'
     | '/auth/callback'
     | '/boxes/$base'
     | '/api/auth/login'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  UiRoute: typeof UiRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   BoxesBaseRoute: typeof BoxesBaseRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -162,6 +175,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ui': {
+      id: '/ui'
+      path: '/ui'
+      fullPath: '/ui'
+      preLoaderRoute: typeof UiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  UiRoute: UiRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   BoxesBaseRoute: BoxesBaseRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
