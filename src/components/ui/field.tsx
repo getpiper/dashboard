@@ -18,7 +18,7 @@ export function Field({
 	className?: string;
 }) {
 	return (
-		// biome-ignore lint: children are form controls with aria-label
+		// biome-ignore lint/a11y/noLabelWithoutControl: children are the form control(s), associated via aria-label
 		<label className={cn("flex flex-col gap-1 text-sm", className)}>
 			{label}
 			{children}
