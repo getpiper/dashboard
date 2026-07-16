@@ -6,7 +6,7 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import Header from "../components/Header";
+import { AppFrame } from "../components/app-frame";
 import { OrgScopeProvider } from "../components/org-scope";
 import { getInvites, getOrgs, getSession } from "../server/fns";
 
@@ -51,8 +51,9 @@ function RootLayout() {
 			orgs={data?.orgs ?? []}
 			invites={data?.invites ?? []}
 		>
-			<Header username={data?.username ?? null} />
-			<Outlet />
+			<AppFrame>
+				<Outlet />
+			</AppFrame>
 		</OrgScopeProvider>
 	);
 }
