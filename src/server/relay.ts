@@ -134,6 +134,27 @@ export async function fetchBox(
 	);
 }
 
+export type BoxDomain = { box: BoxWithApps; domain: DomainStatus | null };
+
+// One custom-domain config per box (the domain is box-scoped, not per-app).
+// Offline boxes can't be reached, so their domain is null.
+export async function fetchAllDomains(
+	credential: string,
+): Promise<BoxDomain[]> {
+	const boxes = await fetchAllApps(credential);
+	return Promise.all(
+		boxes.map(async (box) => {
+			if (!box.connected) return { box, domain: null };
+			try {
+				return { box, domain: await getDomain(credential, box.base) };
+			} catch (err) {
+				if (err instanceof BoxOfflineError) return { box, domain: null };
+				throw err;
+			}
+		}),
+	);
+}
+
 export type Deployment = {
 	id: string;
 	pr: number;
