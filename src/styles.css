@@ -5,6 +5,7 @@
 @import 'tw-animate-css';
 
 :root {
+	color-scheme: dark;
   /* Status palette — device health, never the amber brand color. */
   --status-ok: #4ade80;
   --status-warn: #fb923c;
