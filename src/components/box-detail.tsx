@@ -14,7 +14,7 @@ export function BoxDetail({
 		<main className="flex flex-col gap-4 py-8">
 			<div className="flex items-center gap-2">
 				<span
-					className={`h-2 w-2 rounded-full ${
+					className={`h-2 w-2 rounded-[2px] ${
 						box.connected ? "bg-status-ok" : "bg-status-idle"
 					}`}
 				/>
