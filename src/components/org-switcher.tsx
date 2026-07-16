@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { Input } from "@/components/ui/field";
 import type { Org } from "@/server/relay";
 
 export type OrgSwitcherProps = {
@@ -73,11 +74,11 @@ export function OrgSwitcher({
 			<button
 				type="button"
 				onClick={() => setOpen((o) => !o)}
-				className="relative rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm text-[var(--sea-ink)]"
+				className="relative rounded-[2px] border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
 			>
 				{label}
 				{invites.length > 0 && (
-					<span className="-right-1 -top-1 absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--sea-ink)] px-1 text-[10px] text-white">
+					<span className="-right-1 -top-1 absolute flex h-4 min-w-4 items-center justify-center rounded-[2px] bg-primary px-1 text-[10px] text-primary-foreground">
 						{invites.length}
 					</span>
 				)}
@@ -85,10 +86,10 @@ export function OrgSwitcher({
 			{open && (
 				<div
 					role="menu"
-					className="absolute right-0 z-50 mt-1 flex w-56 flex-col gap-1 rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1.5 shadow-lg"
+					className="absolute right-0 z-50 mt-1 flex w-56 flex-col gap-1 rounded-[2px] border border-border bg-card p-1.5"
 				>
 					{invites.length > 0 && (
-						<div className="flex flex-col gap-1 border-[var(--line)] border-b pb-1.5">
+						<div className="flex flex-col gap-1 border-border border-b pb-1.5">
 							<p className="px-3 pt-1 text-muted-foreground text-xs">
 								Pending invites
 							</p>
@@ -104,7 +105,7 @@ export function OrgSwitcher({
 											aria-label={`Accept ${slug}`}
 											disabled={inviteBusy === slug}
 											onClick={() => act(slug, onAccept)}
-											className="rounded-lg border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2 py-1 text-xs"
+											className="rounded-[2px] border border-border bg-secondary px-2 py-1 text-xs"
 										>
 											Accept
 										</button>
@@ -113,7 +114,7 @@ export function OrgSwitcher({
 											aria-label={`Decline ${slug}`}
 											disabled={inviteBusy === slug}
 											onClick={() => act(slug, onDecline)}
-											className="rounded-lg px-2 py-1 text-muted-foreground text-xs hover:bg-[var(--chip-bg)]"
+											className="rounded-[2px] px-2 py-1 text-muted-foreground text-xs hover:bg-secondary"
 										>
 											Decline
 										</button>
@@ -121,7 +122,7 @@ export function OrgSwitcher({
 								</div>
 							))}
 							{inviteError && (
-								<p role="alert" className="px-3 text-red-600 text-xs">
+								<p role="alert" className="px-3 text-destructive text-xs">
 									{inviteError}
 								</p>
 							)}
@@ -130,7 +131,7 @@ export function OrgSwitcher({
 					<button
 						type="button"
 						onClick={() => pick("personal")}
-						className="rounded-lg px-3 py-1.5 text-left text-sm hover:bg-[var(--chip-bg)]"
+						className="rounded-[2px] px-3 py-1.5 text-left text-sm hover:bg-secondary"
 					>
 						Personal
 					</button>
@@ -139,7 +140,7 @@ export function OrgSwitcher({
 							<button
 								type="button"
 								onClick={() => pick(o.slug)}
-								className="flex flex-1 items-center justify-between rounded-lg px-3 py-1.5 text-left text-sm hover:bg-[var(--chip-bg)]"
+								className="flex flex-1 items-center justify-between rounded-[2px] px-3 py-1.5 text-left text-sm hover:bg-secondary"
 							>
 								<span className="font-mono">{o.slug}</span>
 								<span className="text-muted-foreground text-xs">{o.role}</span>
@@ -151,7 +152,7 @@ export function OrgSwitcher({
 									onManage(o.slug);
 									setOpen(false);
 								}}
-								className="rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-[var(--chip-bg)]"
+								className="rounded-[2px] px-2 py-1.5 text-muted-foreground hover:bg-secondary"
 							>
 								<Settings className="h-4 w-4" />
 							</button>
@@ -159,22 +160,22 @@ export function OrgSwitcher({
 					))}
 					{creating ? (
 						<form onSubmit={submit} className="flex flex-col gap-1.5 p-1.5">
-							<input
+							<Input
 								aria-label="Org name"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 								placeholder="Org name"
-								className="rounded-lg border border-[var(--line)] px-2 py-1 text-sm"
+								className="px-2 py-1"
 							/>
 							<button
 								type="submit"
 								disabled={busy || name.trim() === ""}
-								className="rounded-lg border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1 text-sm"
+								className="rounded-[2px] border border-border bg-secondary px-3 py-1 text-sm"
 							>
 								Create
 							</button>
 							{error && (
-								<p role="alert" className="text-red-600 text-xs">
+								<p role="alert" className="text-destructive text-xs">
 									{error}
 								</p>
 							)}
@@ -183,7 +184,7 @@ export function OrgSwitcher({
 						<button
 							type="button"
 							onClick={() => setCreating(true)}
-							className="rounded-lg px-3 py-1.5 text-left text-muted-foreground text-sm hover:bg-[var(--chip-bg)]"
+							className="rounded-[2px] px-3 py-1.5 text-left text-muted-foreground text-sm hover:bg-secondary"
 						>
 							Create org…
 						</button>
