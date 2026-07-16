@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 const css = await Bun.file(new URL("./styles.css", import.meta.url)).text();
 
-test("terminal scope defines the amber-on-dark palette", () => {
-	expect(css).toContain(".terminal");
+test("terminal tokens are promoted to :root, not scoped under .terminal", () => {
+	expect(css).not.toContain(".terminal");
 	expect(css).toContain("#ffb454"); // amber accent (brand/interactive)
 	expect(css).toContain("--radius: 2px");
 });

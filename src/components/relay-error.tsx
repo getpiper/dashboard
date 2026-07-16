@@ -9,7 +9,7 @@ export function RelayError() {
 			<button
 				type="button"
 				onClick={() => router.invalidate()}
-				className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2 text-sm"
+				className="rounded-[2px] border border-border bg-secondary px-4 py-2 text-sm"
 			>
 				Retry
 			</button>

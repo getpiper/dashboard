@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { PageHeader } from "@/components/ui/page-header";
+import { Panel } from "@/components/ui/panel";
 import { relativeTime } from "@/lib/relative-time";
 import type { BoxWithApps } from "@/server/relay";
 import { StatusBadge } from "./status-badge";
@@ -18,9 +20,8 @@ export function AppsHome({
 
 	if (scoped.length === 0) {
 		return (
-			<main className="page-wrap flex flex-col gap-4 px-4 py-8">
-				<div className="island-kicker">Your hardware</div>
-				<h1 className="font-semibold text-2xl text-[var(--sea-ink)]">Boxes</h1>
+			<main className="flex flex-col gap-4 py-8">
+				<PageHeader kicker="your hardware" title="boxes" />
 				<p className="text-muted-foreground">
 					{scope === "personal" ? (
 						<>
@@ -45,19 +46,14 @@ export function AppsHome({
 	);
 
 	return (
-		<main className="page-wrap flex flex-col gap-5 px-4 py-8">
+		<main className="flex flex-col gap-5 py-8">
 			<div className="flex flex-wrap items-end justify-between gap-4">
-				<div>
-					<div className="island-kicker">Your hardware</div>
-					<h1 className="mt-1.5 font-semibold text-2xl text-[var(--sea-ink)]">
-						Boxes
-					</h1>
-				</div>
+				<PageHeader kicker="your hardware" title="boxes" />
 				<div className="flex flex-wrap gap-2">
-					<span className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1 font-semibold text-sm text-[var(--sea-ink)]">
+					<span className="rounded-[2px] border border-border bg-secondary px-3 py-1 font-semibold text-foreground text-sm">
 						{scoped.length} boxes · {onlineCount} online
 					</span>
-					<span className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1 font-semibold text-sm text-[var(--sea-ink)]">
+					<span className="rounded-[2px] border border-border bg-secondary px-3 py-1 font-semibold text-foreground text-sm">
 						{liveAppCount} apps live
 					</span>
 				</div>
@@ -65,16 +61,13 @@ export function AppsHome({
 
 			<div className="flex flex-col gap-3.5">
 				{scoped.map((box) => (
-					<section
-						key={box.base}
-						className="feature-card flex flex-col gap-3.5 rounded-2xl border border-[var(--line)] p-5"
-					>
+					<Panel key={box.base} className="flex flex-col gap-3.5 p-4">
 						<div className="flex items-center justify-between gap-3">
 							<div className="flex items-center gap-2.5">
 								<Link
 									to="/boxes/$base"
 									params={{ base: box.base }}
-									className="font-mono text-sm text-[var(--sea-ink)] no-underline hover:underline"
+									className="font-mono text-foreground text-sm no-underline hover:underline"
 								>
 									{box.base}
 								</Link>
@@ -84,10 +77,10 @@ export function AppsHome({
 									</span>
 								)}
 							</div>
-							<span className="flex items-center gap-2 text-sm text-[var(--sea-ink)]">
+							<span className="flex items-center gap-2 text-foreground text-sm">
 								<span
-									className={`h-2 w-2 rounded-full ${
-										box.connected ? "bg-emerald-500" : "bg-gray-400"
+									className={`h-2 w-2 rounded-[2px] ${
+										box.connected ? "bg-status-ok" : "bg-status-idle"
 									}`}
 								/>
 								{box.connected ? "Connected" : "Offline"}
@@ -95,23 +88,23 @@ export function AppsHome({
 						</div>
 
 						{box.apps.length === 0 ? (
-							<p className="border-t border-[var(--line)] pt-3.5 text-muted-foreground text-sm">
+							<p className="border-border border-t pt-3.5 text-muted-foreground text-sm">
 								No apps deployed on this box.
 							</p>
 						) : (
 							box.apps.map((a) => (
 								<div
 									key={a.name}
-									className="flex items-center justify-between gap-4 border-t border-[var(--line)] pt-3.5"
+									className="flex items-center justify-between gap-4 border-border border-t pt-3.5"
 								>
 									<div className="flex min-w-0 flex-col gap-0.5">
-										<span className="font-semibold text-sm text-[var(--sea-ink)]">
+										<span className="font-semibold text-foreground text-sm">
 											{a.name}
 										</span>
 										{a.hostname ? (
 											<a
 												href={`https://${a.hostname}`}
-												className="truncate font-mono text-[var(--lagoon-deep)] text-xs no-underline hover:underline"
+												className="truncate font-mono text-primary text-xs no-underline hover:underline"
 											>
 												{a.hostname}
 											</a>
@@ -130,7 +123,7 @@ export function AppsHome({
 								</div>
 							))
 						)}
-					</section>
+					</Panel>
 				))}
 			</div>
 		</main>

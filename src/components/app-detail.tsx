@@ -1,14 +1,14 @@
 import { isRedirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { inputClass } from "@/components/ui/field";
 import { relativeTime } from "@/lib/relative-time";
 import type { App, Deployment } from "@/server/relay";
 import { StatusPill } from "./status-pill";
 
 const actionBtn =
-	"rounded-md border border-[var(--line)] px-3 py-1.5 text-sm hover:bg-[var(--chip-bg)] disabled:opacity-50";
+	"rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50";
 const dangerBtn =
-	"rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50";
-const confirmInput = "rounded-md border border-[var(--line)] px-3 py-2 text-sm";
+	"rounded-[2px] bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
 
 export type AppDetailProps = {
 	appName: string;
@@ -33,7 +33,7 @@ export function AppDetail({
 }: AppDetailProps) {
 	if (!connected) {
 		return (
-			<main className="page-wrap flex flex-col gap-4 px-4 py-8">
+			<main className="flex flex-col gap-6 py-8">
 				<p className="text-muted-foreground">
 					This box is offline — its apps can't be reached.
 				</p>
@@ -43,7 +43,7 @@ export function AppDetail({
 
 	if (!app) {
 		return (
-			<main className="page-wrap flex flex-col gap-4 px-4 py-8">
+			<main className="flex flex-col gap-6 py-8">
 				<p className="text-muted-foreground">
 					App "{appName}" not found on this box.
 				</p>
@@ -52,17 +52,14 @@ export function AppDetail({
 	}
 
 	return (
-		<main className="page-wrap flex flex-col gap-6 px-4 py-8">
+		<main className="flex flex-col gap-6 py-8">
 			<div className="flex flex-col gap-1.5">
 				<div className="flex items-center gap-3">
 					<h1 className="font-mono font-semibold text-xl">{app.name}</h1>
 					<StatusPill status={app.status} />
 				</div>
 				{app.hostname ? (
-					<a
-						href={`https://${app.hostname}`}
-						className="text-muted-foreground text-sm underline"
-					>
+					<a href={`https://${app.hostname}`} className="text-primary text-sm">
 						{app.hostname}
 					</a>
 				) : (
@@ -170,8 +167,8 @@ function AppActions({
 			</div>
 
 			{confirming && (
-				<div className="flex flex-col gap-2 rounded-lg border border-red-600/40 p-3">
-					<p className="text-red-600 text-sm">
+				<div className="flex flex-col gap-2 rounded-[2px] border border-destructive/40 p-3">
+					<p className="text-destructive text-sm">
 						This permanently deletes <span className="font-mono">{name}</span>{" "}
 						and its deployments. This can't be undone — type the app name to
 						confirm.
@@ -180,7 +177,7 @@ function AppActions({
 						aria-label="Confirm app name"
 						value={typed}
 						onChange={(e) => setTyped(e.target.value)}
-						className={confirmInput}
+						className={inputClass}
 					/>
 					<div className="flex gap-2">
 						<button
@@ -205,7 +202,7 @@ function AppActions({
 				</div>
 			)}
 
-			{error && <p className="text-red-600 text-sm">{error}</p>}
+			{error && <p className="text-destructive text-sm">{error}</p>}
 		</div>
 	);
 }
@@ -223,7 +220,7 @@ function DeploymentRow({
 }) {
 	const [open, setOpen] = useState(false);
 	return (
-		<li className="rounded-lg border border-[var(--line)]">
+		<li className="rounded-[2px] border border-border">
 			{/* biome-ignore lint/a11y/useSemanticElements: a <button> can't contain
 			    the interactive PR-preview <a>, so this toggle row is a
 			    div[role=button] with keyboard handling. */}
@@ -282,7 +279,7 @@ function LogPanel({
 }) {
 	const logs = useLiveTail(status, fetchLogs, refresh);
 	return (
-		<pre className="max-h-96 overflow-auto border-[var(--line)] border-t bg-[var(--chip-bg)] px-4 py-3 font-mono text-xs">
+		<pre className="max-h-96 overflow-auto border-border border-t bg-secondary px-4 py-3 font-mono text-xs">
 			{logs || "No logs."}
 		</pre>
 	);

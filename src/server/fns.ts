@@ -10,6 +10,7 @@ import {
 	deleteOrg,
 	exchangeGithub,
 	fetchAllApps,
+	fetchAllDomains,
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
@@ -48,6 +49,17 @@ export const getApps = createServerFn().handler(async () => {
 	if (!credential) throw redirect({ to: "/login" });
 	try {
 		return await fetchAllApps(credential);
+	} catch (err) {
+		if (err instanceof RelayAuthError) dropSessionAndRedirect();
+		throw err;
+	}
+});
+
+export const getDomainsFn = createServerFn().handler(async () => {
+	const credential = getCookie("piper_session");
+	if (!credential) throw redirect({ to: "/login" });
+	try {
+		return await fetchAllDomains(credential);
 	} catch (err) {
 		if (err instanceof RelayAuthError) dropSessionAndRedirect();
 		throw err;

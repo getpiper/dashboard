@@ -1,12 +1,12 @@
 import { isRedirect } from "@tanstack/react-router";
 import { useState } from "react";
+import { Input } from "@/components/ui/field";
 import type { OrgMember } from "@/server/relay";
 
 const actionBtn =
-	"rounded-md border border-[var(--line)] px-3 py-1.5 text-sm hover:bg-[var(--chip-bg)] disabled:opacity-50";
+	"rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50";
 const dangerBtn =
-	"rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50";
-const field = "rounded-md border border-[var(--line)] px-3 py-2 text-sm";
+	"rounded-[2px] bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
 
 export type OrgSettingsProps = {
 	slug: string;
@@ -37,7 +37,7 @@ export function OrgSettings({
 }: OrgSettingsProps) {
 	const ownerCount = members.filter((m) => m.role === "owner").length;
 	return (
-		<div className="page-wrap flex flex-col gap-8 py-8">
+		<div className="flex flex-col gap-8 py-8">
 			<h1 className="font-semibold text-lg">
 				<span className="font-mono">{slug}</span> settings
 			</h1>
@@ -107,7 +107,7 @@ function MembersSection({
 						const isSelf = m.username === username;
 						const lastOwner = m.role === "owner" && ownerCount === 1;
 						return (
-							<tr key={m.username} className="border-[var(--line)] border-b">
+							<tr key={m.username} className="border-border border-b">
 								<td className="py-2 pr-4 font-mono">
 									{m.username}
 									{isSelf && (
@@ -157,7 +157,7 @@ function MembersSection({
 					})}
 				</tbody>
 			</table>
-			{error && <p className="text-red-600 text-sm">{error}</p>}
+			{error && <p className="text-destructive text-sm">{error}</p>}
 		</section>
 	);
 }
@@ -203,12 +203,11 @@ function InvitesSection({
 		<section className="flex flex-col gap-3">
 			<h2 className="font-semibold text-sm">Pending invites</h2>
 			<div className="flex gap-2">
-				<input
+				<Input
 					aria-label="GitHub username"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
 					placeholder="octocat"
-					className={field}
 				/>
 				<button
 					type="button"
@@ -240,7 +239,7 @@ function InvitesSection({
 					))}
 				</ul>
 			)}
-			{error && <p className="text-red-600 text-sm">{error}</p>}
+			{error && <p className="text-destructive text-sm">{error}</p>}
 		</section>
 	);
 }
@@ -260,7 +259,7 @@ function DangerZone({
 }) {
 	return (
 		<section className="flex flex-col gap-3">
-			<h2 className="font-semibold text-red-600 text-sm">Danger zone</h2>
+			<h2 className="font-semibold text-destructive text-sm">Danger zone</h2>
 			<LeaveOrg soleOwner={soleOwner} onLeave={onLeave} />
 			{role === "owner" && <DeleteOrg slug={slug} onDelete={onDelete} />}
 		</section>
@@ -329,7 +328,7 @@ function LeaveOrg({
 					)}
 				</div>
 			)}
-			{error && <p className="text-red-600 text-sm">{error}</p>}
+			{error && <p className="text-destructive text-sm">{error}</p>}
 		</div>
 	);
 }
@@ -362,16 +361,15 @@ function DeleteOrg({
 	return (
 		<div className="flex flex-col gap-2">
 			{confirming ? (
-				<div className="flex flex-col gap-2 rounded-lg border border-red-600/40 p-3">
-					<p className="text-red-600 text-sm">
+				<div className="flex flex-col gap-2 rounded-[2px] border border-destructive/40 p-3">
+					<p className="text-destructive text-sm">
 						This permanently deletes <span className="font-mono">{slug}</span>.
 						Type the slug to confirm.
 					</p>
-					<input
+					<Input
 						aria-label="Confirm org slug"
 						value={typed}
 						onChange={(e) => setTyped(e.target.value)}
-						className={field}
 					/>
 					<div className="flex gap-2">
 						<button
@@ -393,7 +391,7 @@ function DeleteOrg({
 							{busy ? "Deleting…" : "Delete"}
 						</button>
 					</div>
-					{error && <p className="text-red-600 text-sm">{error}</p>}
+					{error && <p className="text-destructive text-sm">{error}</p>}
 				</div>
 			) : (
 				<div>
