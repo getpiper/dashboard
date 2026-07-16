@@ -86,7 +86,7 @@ export function DomainsList({
 									box.apps.map((a) => (
 										<Row key={a.name}>
 											<span className="text-foreground">{a.name}</span>
-											<span className="ml-auto text-primary">
+											<span className="ml-auto text-muted-foreground">
 												{a.name}.{domain.domain}
 											</span>
 										</Row>
