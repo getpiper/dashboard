@@ -11,15 +11,15 @@ export function BoxDetail({
 	children?: ReactNode;
 }) {
 	return (
-		<main className="page-wrap flex flex-col gap-4 px-4 py-8">
+		<main className="flex flex-col gap-4 py-8">
 			<div className="flex items-center gap-2">
 				<span
 					className={`h-2 w-2 rounded-full ${
-						box.connected ? "bg-emerald-500" : "bg-gray-400"
+						box.connected ? "bg-status-ok" : "bg-status-idle"
 					}`}
 				/>
 				<h1 className="font-mono font-semibold text-xl">{box.base}</h1>
-				<span className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2 py-0.5 text-xs text-muted-foreground">
+				<span className="rounded-[2px] border border-border bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
 					{box.owner}
 				</span>
 				{box.connected && (
@@ -28,7 +28,7 @@ export function BoxDetail({
 				<Link
 					to="/boxes/$base/import"
 					params={{ base: box.base }}
-					className="ml-auto rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm hover:bg-[var(--chip-bg)]"
+					className="ml-auto rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary"
 				>
 					New project
 				</Link>
@@ -47,7 +47,7 @@ export function BoxDetail({
 							<Link
 								to="/boxes/$base/apps/$app"
 								params={{ base: box.base, app: app.name }}
-								className="flex items-center justify-between rounded-lg border border-[var(--line)] px-4 py-3 hover:bg-[var(--chip-bg)]"
+								className="flex items-center justify-between rounded-[2px] border border-border px-4 py-3 hover:bg-secondary"
 							>
 								<span className="font-medium text-sm">{app.name}</span>
 								<StatusPill status={app.status} />
