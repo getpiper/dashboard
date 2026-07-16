@@ -10,7 +10,7 @@ export default function SessionControls({
 			<button
 				type="button"
 				onClick={logout}
-				className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm"
+				className="rounded-[2px] border border-border bg-secondary px-3 py-1.5 text-sm"
 			>
 				Log out
 			</button>

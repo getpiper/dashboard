@@ -1,31 +1,29 @@
 type BadgeMeta = { label: string; dot: string; pill: string };
 
-// Colours are semantic and constant across light/dark, matching the mockup.
-const MUTED =
-	"text-[var(--sea-ink-soft)] bg-[var(--chip-bg)] border-[var(--chip-line)]";
+const MUTED = "text-muted-foreground border-border bg-secondary";
 
 const STATUS: Record<string, BadgeMeta> = {
 	running: {
 		label: "Live",
-		dot: "bg-[#10b981]",
-		pill: "text-[#0b7a5b] bg-[rgba(16,185,129,0.13)] border-[rgba(16,185,129,0.28)]",
+		dot: "bg-status-ok",
+		pill: "text-status-ok border-status-ok/30 bg-status-ok/10",
 	},
 	building: {
 		label: "Building",
-		dot: "bg-[#f59e0b]",
-		pill: "text-[#a15c07] bg-[rgba(245,158,11,0.14)] border-[rgba(245,158,11,0.3)]",
+		dot: "bg-status-warn",
+		pill: "text-status-warn border-status-warn/30 bg-status-warn/10",
 	},
 	failed: {
 		label: "Failed",
-		dot: "bg-[#e5484d]",
-		pill: "text-[#b42318] bg-[rgba(229,72,77,0.13)] border-[rgba(229,72,77,0.3)]",
+		dot: "bg-status-danger",
+		pill: "text-status-danger border-status-danger/30 bg-status-danger/10",
 	},
-	stopped: { label: "Stopped", dot: "bg-gray-400", pill: MUTED },
+	stopped: { label: "Stopped", dot: "bg-status-idle", pill: MUTED },
 };
 
 const FALLBACK: BadgeMeta = {
 	label: "Never deployed",
-	dot: "bg-gray-400",
+	dot: "bg-status-idle",
 	pill: MUTED,
 };
 
@@ -33,9 +31,9 @@ export function StatusBadge({ status }: { status: string }) {
 	const meta = STATUS[status] ?? FALLBACK;
 	return (
 		<span
-			className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${meta.pill}`}
+			className={`inline-flex items-center gap-1.5 rounded-[2px] border px-2.5 py-0.5 font-semibold text-xs ${meta.pill}`}
 		>
-			<span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+			<span className={`h-1.5 w-1.5 rounded-[2px] ${meta.dot}`} />
 			{meta.label}
 		</span>
 	);

@@ -9,7 +9,7 @@ export function LoginCard() {
 			</div>
 			<a
 				href="/api/auth/login"
-				className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-5 py-2.5 text-sm font-medium text-[var(--sea-ink)] no-underline shadow-[0_8px_24px_rgba(30,90,72,0.08)]"
+				className="inline-flex items-center gap-2 rounded-[2px] border border-primary bg-transparent px-5 py-2.5 text-sm font-medium text-primary no-underline"
 			>
 				Continue with GitHub
 			</a>
