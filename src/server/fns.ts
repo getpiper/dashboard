@@ -3,14 +3,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie } from "@tanstack/react-start/server";
 import {
 	acceptInvite,
+	addAppDomain,
 	createApp,
 	createOrg,
 	declineInvite,
 	deleteApp,
 	deleteOrg,
 	exchangeGithub,
+	fetchAllAppDomains,
 	fetchAllApps,
-	fetchAllDomains,
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
@@ -18,15 +19,13 @@ import {
 	fetchOrgInvites,
 	fetchOrgMembers,
 	fetchOrgs,
-	getDomain,
 	githubManifest,
 	inviteOrgMember,
 	linkApp,
 	RelayAuthError,
-	removeDomain,
+	removeAppDomain,
 	removeOrgMember,
 	revokeOrgInvite,
-	setDomain,
 	setOrgMemberRole,
 	stopApp,
 } from "./relay";
@@ -49,17 +48,6 @@ export const getApps = createServerFn().handler(async () => {
 	if (!credential) throw redirect({ to: "/login" });
 	try {
 		return await fetchAllApps(credential);
-	} catch (err) {
-		if (err instanceof RelayAuthError) dropSessionAndRedirect();
-		throw err;
-	}
-});
-
-export const getDomainsFn = createServerFn().handler(async () => {
-	const credential = getCookie("piper_session");
-	if (!credential) throw redirect({ to: "/login" });
-	try {
-		return await fetchAllDomains(credential);
 	} catch (err) {
 		if (err instanceof RelayAuthError) dropSessionAndRedirect();
 		throw err;
@@ -184,43 +172,37 @@ export const deleteAppFn = createServerFn({ method: "POST" })
 		}
 	});
 
-export const getDomainFn = createServerFn()
-	.validator((base: string) => base)
-	.handler(async ({ data: base }) => {
-		const credential = getCookie("piper_session");
-		if (!credential) throw redirect({ to: "/login" });
-		try {
-			return await getDomain(credential, base);
-		} catch (err) {
-			if (err instanceof RelayAuthError) dropSessionAndRedirect();
-			throw err;
-		}
-	});
+export const getAppDomainsFn = createServerFn().handler(async () => {
+	const credential = getCookie("piper_session");
+	if (!credential) throw redirect({ to: "/login" });
+	try {
+		return await fetchAllAppDomains(credential);
+	} catch (err) {
+		if (err instanceof RelayAuthError) dropSessionAndRedirect();
+		throw err;
+	}
+});
 
-export const setDomainFn = createServerFn({ method: "POST" })
-	.validator((d: { base: string; domain: string; token: string }) => d)
+export const addAppDomainFn = createServerFn({ method: "POST" })
+	.validator((d: { base: string; app: string; domain: string }) => d)
 	.handler(async ({ data }) => {
 		const credential = getCookie("piper_session");
 		if (!credential) throw redirect({ to: "/login" });
 		try {
-			return await setDomain(credential, data.base, {
-				domain: data.domain,
-				provider: "cloudflare",
-				token: data.token,
-			});
+			return await addAppDomain(credential, data.base, data.app, data.domain);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;
 		}
 	});
 
-export const removeDomainFn = createServerFn({ method: "POST" })
-	.validator((base: string) => base)
-	.handler(async ({ data: base }) => {
+export const removeAppDomainFn = createServerFn({ method: "POST" })
+	.validator((d: { base: string; app: string; domain: string }) => d)
+	.handler(async ({ data }) => {
 		const credential = getCookie("piper_session");
 		if (!credential) throw redirect({ to: "/login" });
 		try {
-			await removeDomain(credential, base);
+			await removeAppDomain(credential, data.base, data.app, data.domain);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;

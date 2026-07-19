@@ -1,79 +1,138 @@
 import { Link } from "@tanstack/react-router";
 import { HintBar } from "@/components/ui/hint-bar";
 import { PageHeader } from "@/components/ui/page-header";
-import { Panel, PanelHeader } from "@/components/ui/panel";
-import { Row } from "@/components/ui/row";
-import { StatusDot } from "@/components/ui/status-dot";
-import { appDeviceStatus } from "@/lib/app-status";
-import type { App, BoxWithApps } from "@/server/relay";
+import { relativeTime } from "@/lib/relative-time";
+import type { App, AppDomainStatus, BoxAppDomains } from "@/server/relay";
+import { StatusBadge } from "./status-badge";
 
-export type FlatApp = { base: string; app: App };
+export type FlatApp = {
+	base: string;
+	boxConnected: boolean;
+	app: App;
+	domain: AppDomainStatus | null;
+};
 
 export function flattenApps(
-	boxes: BoxWithApps[],
+	items: BoxAppDomains[],
 	scope: string,
 	username: string | null,
 ): FlatApp[] {
-	return boxes
-		.filter((b) =>
-			scope === "personal" ? b.owner === username : b.owner === scope,
+	return items
+		.filter(({ box }) =>
+			scope === "personal" ? box.owner === username : box.owner === scope,
 		)
-		.flatMap((b) => b.apps.map((app) => ({ base: b.base, app })));
+		.flatMap(({ box, domains }) =>
+			box.apps.map((app) => ({
+				base: box.base,
+				boxConnected: box.connected,
+				app,
+				domain: domains[app.name]?.[0] ?? null,
+			})),
+		);
+}
+
+function MetaRow({
+	label,
+	children,
+}: {
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-center gap-2">
+			<span className="w-16 flex-shrink-0 text-muted-foreground">{label}</span>
+			{children}
+		</div>
+	);
+}
+
+function AppCard({ base, boxConnected, app, domain }: FlatApp) {
+	return (
+		<div className="relative flex flex-col gap-3 rounded-[2px] border border-border bg-card p-4 hover:bg-secondary/40">
+			<div className="flex items-start justify-between gap-2.5">
+				<Link
+					to="/boxes/$base/apps/$app"
+					params={{ base, app: app.name }}
+					className="truncate font-semibold text-[15px] text-foreground no-underline after:absolute after:inset-0"
+				>
+					{app.name}
+				</Link>
+				<StatusBadge status={app.status} />
+			</div>
+			{app.hostname ? (
+				<a
+					href={`https://${app.hostname}`}
+					className="relative truncate text-primary text-xs no-underline hover:underline"
+				>
+					{app.hostname}
+				</a>
+			) : (
+				<span className="truncate text-muted-foreground text-xs">
+					not deployed
+				</span>
+			)}
+			<div className="flex flex-col gap-1.5 border-border border-t pt-3 text-xs">
+				<MetaRow label="box">
+					<span
+						className={`h-1.5 w-1.5 flex-shrink-0 rounded-[2px] ${
+							boxConnected ? "bg-status-ok" : "bg-status-idle"
+						}`}
+					/>
+					<span className="truncate text-foreground">{base}</span>
+				</MetaRow>
+				<MetaRow label="repo">
+					<span className="truncate text-foreground">
+						{app.repo}@{app.branch}
+					</span>
+				</MetaRow>
+				{domain != null && (
+					<MetaRow label="domain">
+						<span className="truncate text-primary">{domain.domain}</span>
+					</MetaRow>
+				)}
+				<MetaRow label="deployed">
+					<span className="text-foreground">{relativeTime(app.createdAt)}</span>
+				</MetaRow>
+			</div>
+		</div>
+	);
 }
 
 export function AppsList({
-	boxes,
+	items,
 	scope,
 	username,
 }: {
-	boxes: BoxWithApps[];
+	items: BoxAppDomains[];
 	scope: string;
 	username: string | null;
 }) {
-	const apps = flattenApps(boxes, scope, username);
+	const apps = flattenApps(items, scope, username);
 	return (
 		<main className="flex flex-col gap-5 py-8">
-			<PageHeader
-				kicker="your software"
-				title="apps"
-				subtitle={`${apps.length} apps`}
-			/>
+			<div className="flex flex-wrap items-end justify-between gap-4">
+				<PageHeader
+					kicker="your software"
+					title="apps"
+					subtitle={`${apps.length} apps`}
+				/>
+				<Link
+					to="/apps/new"
+					className="rounded-[2px] bg-primary px-4 py-2 font-medium text-primary-foreground text-sm no-underline hover:bg-primary/90"
+				>
+					+ New app
+				</Link>
+			</div>
 			{apps.length === 0 ? (
 				<HintBar>
 					deploy one with <code>piper deploy</code> from a box.
 				</HintBar>
 			) : (
-				<Panel>
-					<PanelHeader>app</PanelHeader>
-					{apps.map(({ base, app }) => (
-						<Row key={`${base}/${app.name}`}>
-							<StatusDot status={appDeviceStatus(app.status)} />
-							<Link
-								to="/boxes/$base/apps/$app"
-								params={{ base, app: app.name }}
-								className="text-foreground no-underline hover:underline"
-							>
-								{app.name}
-							</Link>
-							<span>· {base}</span>
-							<span className="hidden sm:inline">
-								· {app.repo}@{app.branch}
-							</span>
-							{app.hostname ? (
-								<a
-									href={`https://${app.hostname}`}
-									className="ml-auto truncate text-primary no-underline hover:underline"
-								>
-									{app.hostname}
-								</a>
-							) : (
-								<span className="ml-auto text-muted-foreground">
-									not deployed
-								</span>
-							)}
-						</Row>
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-3.5">
+					{apps.map((f) => (
+						<AppCard key={`${f.base}/${f.app.name}`} {...f} />
 					))}
-				</Panel>
+				</div>
 			)}
 		</main>
 	);

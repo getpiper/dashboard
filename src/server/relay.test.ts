@@ -18,16 +18,13 @@ import {
 	fetchOrgInvites,
 	fetchOrgMembers,
 	fetchOrgs,
-	getDomain,
 	githubManifest,
 	inviteOrgMember,
 	linkApp,
 	RelayAuthError,
 	relayUrl,
-	removeDomain,
 	removeOrgMember,
 	revokeOrgInvite,
-	setDomain,
 	setOrgMemberRole,
 	stopApp,
 } from "./relay";
@@ -637,135 +634,6 @@ test("deleteApp surfaces the box message on 404 (unknown app)", async () => {
 	globalThis.fetch = (async () =>
 		new Response("unknown app", { status: 404 })) as unknown as typeof fetch;
 	expect(deleteApp("cred-1", "b", "gone")).rejects.toThrow(/unknown app/);
-});
-
-test("getDomain GETs {relay}/agents/{base}/v1/domain and maps snake_case", async () => {
-	let seenUrl = "";
-	let seenAuth: string | null = null;
-	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
-		seenUrl = String(url);
-		seenAuth = new Headers(init?.headers).get("Authorization");
-		return Response.json({
-			domain: "shop.example.com",
-			dns_provider: "cloudflare",
-			dns_token_set: true,
-			source: "api",
-			status: "issuing",
-			error: "",
-			cert_not_after: null,
-			dns_records: [
-				{ type: "CNAME", name: "*.shop.example.com", value: "relay.test" },
-				{ type: "CNAME", name: "shop.example.com", value: "relay.test" },
-			],
-			dns_ok: false,
-		});
-	}) as typeof fetch;
-
-	const status = await getDomain("cred-1", "abc-zoe.public.example");
-	expect(seenUrl).toBe(
-		"https://relay.test/agents/abc-zoe.public.example/v1/domain",
-	);
-	expect<string | null>(seenAuth).toBe("Bearer cred-1");
-	expect(status).toEqual({
-		domain: "shop.example.com",
-		dnsProvider: "cloudflare",
-		dnsTokenSet: true,
-		source: "api",
-		status: "issuing",
-		error: "",
-		certNotAfter: null,
-		dnsRecords: [
-			{ type: "CNAME", name: "*.shop.example.com", value: "relay.test" },
-			{ type: "CNAME", name: "shop.example.com", value: "relay.test" },
-		],
-		dnsOk: false,
-	});
-});
-
-test("getDomain throws RelayAuthError on 401 and BoxOfflineError on 503", async () => {
-	globalThis.fetch = (async () =>
-		new Response("nope", { status: 401 })) as unknown as typeof fetch;
-	expect(getDomain("bad", "b")).rejects.toBeInstanceOf(RelayAuthError);
-	globalThis.fetch = (async () =>
-		new Response("offline", { status: 503 })) as unknown as typeof fetch;
-	expect(getDomain("cred-1", "b")).rejects.toBeInstanceOf(BoxOfflineError);
-});
-
-test("setDomain PUTs domain+dns_provider+dns_token and maps the returned status", async () => {
-	let seenUrl = "";
-	let seenMethod = "";
-	let seenBody = "";
-	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
-		seenUrl = String(url);
-		seenMethod = String(init?.method);
-		seenBody = String(init?.body);
-		return Response.json({
-			domain: "shop.example.com",
-			dns_provider: "cloudflare",
-			dns_token_set: true,
-			source: "api",
-			status: "issuing",
-			error: "",
-			dns_records: [],
-			dns_ok: false,
-		});
-	}) as typeof fetch;
-
-	const status = await setDomain("cred-1", "abc-zoe.public.example", {
-		domain: "shop.example.com",
-		provider: "cloudflare",
-		token: "cf-token-xyz",
-	});
-	expect(seenUrl).toBe(
-		"https://relay.test/agents/abc-zoe.public.example/v1/domain",
-	);
-	expect(seenMethod).toBe("PUT");
-	expect(JSON.parse(seenBody)).toEqual({
-		domain: "shop.example.com",
-		dns_provider: "cloudflare",
-		dns_token: "cf-token-xyz",
-	});
-	expect(status.status).toBe("issuing");
-	expect(status.certNotAfter).toBe(null);
-});
-
-test("setDomain surfaces the box message on 400 (unsupported provider)", async () => {
-	globalThis.fetch = (async () =>
-		new Response("unsupported dns provider", {
-			status: 400,
-		})) as unknown as typeof fetch;
-	expect(
-		setDomain("cred-1", "b", {
-			domain: "shop.example.com",
-			provider: "route53",
-			token: "t",
-		}),
-	).rejects.toThrow(/unsupported dns provider/);
-});
-
-test("removeDomain DELETEs the domain path and resolves on 204", async () => {
-	let seenUrl = "";
-	let seenMethod = "";
-	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
-		seenUrl = String(url);
-		seenMethod = String(init?.method);
-		return new Response(null, { status: 204 });
-	}) as typeof fetch;
-
-	await removeDomain("cred-1", "abc-zoe.public.example");
-	expect(seenUrl).toBe(
-		"https://relay.test/agents/abc-zoe.public.example/v1/domain",
-	);
-	expect(seenMethod).toBe("DELETE");
-});
-
-test("removeDomain throws RelayAuthError on 401 and BoxOfflineError on 502", async () => {
-	globalThis.fetch = (async () =>
-		new Response("nope", { status: 401 })) as unknown as typeof fetch;
-	expect(removeDomain("bad", "b")).rejects.toBeInstanceOf(RelayAuthError);
-	globalThis.fetch = (async () =>
-		new Response("bad gateway", { status: 502 })) as unknown as typeof fetch;
-	expect(removeDomain("cred-1", "b")).rejects.toBeInstanceOf(BoxOfflineError);
 });
 
 test("fetchOrgs maps the orgs envelope to Org[]", async () => {

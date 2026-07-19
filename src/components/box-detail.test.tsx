@@ -76,15 +76,14 @@ test("shows an offline box with no apps", async () => {
 	expect(screen.queryAllByRole("listitem")).toHaveLength(0);
 });
 
-test("offers a New project link to the import route", async () => {
+test("has no per-box New project entry point (apps are created from /apps/new)", async () => {
 	await renderInRouter({
 		base: "up-zoe.public.example",
 		owner: "zoe",
 		connected: true,
 		apps: [],
 	});
-	const link = screen.getByRole("link", { name: /new project/i });
-	expect(link.getAttribute("href")).toBe("/boxes/up-zoe.public.example/import");
+	expect(screen.queryByRole("link", { name: /new project/i })).toBeNull();
 });
 
 test("shows the owning org slug as a badge", async () => {

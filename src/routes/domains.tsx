@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { DomainsList } from "@/components/domains-list";
 import { useOrgScope } from "@/components/org-scope";
 import { RelayError } from "@/components/relay-error";
-import { getDomainsFn } from "@/server/fns";
+import { addAppDomainFn, getAppDomainsFn } from "@/server/fns";
 
 export const Route = createFileRoute("/domains")({
-	loader: () => getDomainsFn(),
+	loader: () => getAppDomainsFn(),
 	component: DomainsPage,
 	errorComponent: RelayError,
 });
@@ -13,5 +13,16 @@ export const Route = createFileRoute("/domains")({
 function DomainsPage() {
 	const items = Route.useLoaderData();
 	const { scope, username } = useOrgScope();
-	return <DomainsList items={items} scope={scope} username={username} />;
+	const router = useRouter();
+	return (
+		<DomainsList
+			items={items}
+			scope={scope}
+			username={username}
+			onAdd={async (base, app, domain) => {
+				await addAppDomainFn({ data: { base, app, domain } });
+				await router.invalidate();
+			}}
+		/>
+	);
 }

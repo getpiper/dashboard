@@ -1,17 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AppsHome } from "@/components/apps-home";
-import { useOrgScope } from "@/components/org-scope";
-import { RelayError } from "@/components/relay-error";
-import { getApps } from "@/server/fns";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// Apps are the landing screen (Vercel-like); boxes live under /boxes.
 export const Route = createFileRoute("/")({
-	loader: () => getApps(),
-	component: HomePage,
-	errorComponent: RelayError,
+	beforeLoad: () => {
+		throw redirect({ to: "/apps" });
+	},
 });
-
-function HomePage() {
-	const boxes = Route.useLoaderData();
-	const { scope, username } = useOrgScope();
-	return <AppsHome boxes={boxes} scope={scope} username={username} />;
-}
