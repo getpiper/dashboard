@@ -14,10 +14,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DomainsRouteImport } from './routes/domains'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BoxesIndexRouteImport } from './routes/boxes/index'
 import { Route as BoxesBaseRouteImport } from './routes/boxes/$base'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as AppsNewRouteImport } from './routes/apps_.new'
 import { Route as OrgsSlugSettingsRouteImport } from './routes/orgs/$slug.settings'
-import { Route as BoxesBaseImportRouteImport } from './routes/boxes/$base_.import'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
@@ -48,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BoxesIndexRoute = BoxesIndexRouteImport.update({
+  id: '/boxes/',
+  path: '/boxes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BoxesBaseRoute = BoxesBaseRouteImport.update({
   id: '/boxes/$base',
   path: '/boxes/$base',
@@ -58,14 +64,14 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsNewRoute = AppsNewRouteImport.update({
+  id: '/apps_/new',
+  path: '/apps/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgsSlugSettingsRoute = OrgsSlugSettingsRouteImport.update({
   id: '/orgs/$slug/settings',
   path: '/orgs/$slug/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BoxesBaseImportRoute = BoxesBaseImportRouteImport.update({
-  id: '/boxes/$base_/import',
-  path: '/boxes/$base/import',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
@@ -95,12 +101,13 @@ export interface FileRoutesByFullPath {
   '/domains': typeof DomainsRoute
   '/login': typeof LoginRoute
   '/ui': typeof UiRoute
+  '/apps/new': typeof AppsNewRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/boxes/$base': typeof BoxesBaseRoute
+  '/boxes/': typeof BoxesIndexRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
-  '/boxes/$base/import': typeof BoxesBaseImportRoute
   '/orgs/$slug/settings': typeof OrgsSlugSettingsRoute
   '/boxes/$base/apps/$app': typeof BoxesBaseAppsAppRoute
 }
@@ -110,12 +117,13 @@ export interface FileRoutesByTo {
   '/domains': typeof DomainsRoute
   '/login': typeof LoginRoute
   '/ui': typeof UiRoute
+  '/apps/new': typeof AppsNewRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/boxes/$base': typeof BoxesBaseRoute
+  '/boxes': typeof BoxesIndexRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
-  '/boxes/$base/import': typeof BoxesBaseImportRoute
   '/orgs/$slug/settings': typeof OrgsSlugSettingsRoute
   '/boxes/$base/apps/$app': typeof BoxesBaseAppsAppRoute
 }
@@ -126,12 +134,13 @@ export interface FileRoutesById {
   '/domains': typeof DomainsRoute
   '/login': typeof LoginRoute
   '/ui': typeof UiRoute
+  '/apps_/new': typeof AppsNewRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/boxes/$base': typeof BoxesBaseRoute
+  '/boxes/': typeof BoxesIndexRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
-  '/boxes/$base_/import': typeof BoxesBaseImportRoute
   '/orgs/$slug/settings': typeof OrgsSlugSettingsRoute
   '/boxes/$base_/apps/$app': typeof BoxesBaseAppsAppRoute
 }
@@ -143,12 +152,13 @@ export interface FileRouteTypes {
     | '/domains'
     | '/login'
     | '/ui'
+    | '/apps/new'
     | '/auth/callback'
     | '/boxes/$base'
+    | '/boxes/'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/session'
-    | '/boxes/$base/import'
     | '/orgs/$slug/settings'
     | '/boxes/$base/apps/$app'
   fileRoutesByTo: FileRoutesByTo
@@ -158,12 +168,13 @@ export interface FileRouteTypes {
     | '/domains'
     | '/login'
     | '/ui'
+    | '/apps/new'
     | '/auth/callback'
     | '/boxes/$base'
+    | '/boxes'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/session'
-    | '/boxes/$base/import'
     | '/orgs/$slug/settings'
     | '/boxes/$base/apps/$app'
   id:
@@ -173,12 +184,13 @@ export interface FileRouteTypes {
     | '/domains'
     | '/login'
     | '/ui'
+    | '/apps_/new'
     | '/auth/callback'
     | '/boxes/$base'
+    | '/boxes/'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/session'
-    | '/boxes/$base_/import'
     | '/orgs/$slug/settings'
     | '/boxes/$base_/apps/$app'
   fileRoutesById: FileRoutesById
@@ -189,12 +201,13 @@ export interface RootRouteChildren {
   DomainsRoute: typeof DomainsRoute
   LoginRoute: typeof LoginRoute
   UiRoute: typeof UiRoute
+  AppsNewRoute: typeof AppsNewRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   BoxesBaseRoute: typeof BoxesBaseRoute
+  BoxesIndexRoute: typeof BoxesIndexRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
-  BoxesBaseImportRoute: typeof BoxesBaseImportRoute
   OrgsSlugSettingsRoute: typeof OrgsSlugSettingsRoute
   BoxesBaseAppsAppRoute: typeof BoxesBaseAppsAppRoute
 }
@@ -236,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/boxes/': {
+      id: '/boxes/'
+      path: '/boxes'
+      fullPath: '/boxes/'
+      preLoaderRoute: typeof BoxesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/boxes/$base': {
       id: '/boxes/$base'
       path: '/boxes/$base'
@@ -250,18 +270,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps_/new': {
+      id: '/apps_/new'
+      path: '/apps/new'
+      fullPath: '/apps/new'
+      preLoaderRoute: typeof AppsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orgs/$slug/settings': {
       id: '/orgs/$slug/settings'
       path: '/orgs/$slug/settings'
       fullPath: '/orgs/$slug/settings'
       preLoaderRoute: typeof OrgsSlugSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/boxes/$base_/import': {
-      id: '/boxes/$base_/import'
-      path: '/boxes/$base/import'
-      fullPath: '/boxes/$base/import'
-      preLoaderRoute: typeof BoxesBaseImportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/session': {
@@ -301,12 +321,13 @@ const rootRouteChildren: RootRouteChildren = {
   DomainsRoute: DomainsRoute,
   LoginRoute: LoginRoute,
   UiRoute: UiRoute,
+  AppsNewRoute: AppsNewRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   BoxesBaseRoute: BoxesBaseRoute,
+  BoxesIndexRoute: BoxesIndexRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
-  BoxesBaseImportRoute: BoxesBaseImportRoute,
   OrgsSlugSettingsRoute: OrgsSlugSettingsRoute,
   BoxesBaseAppsAppRoute: BoxesBaseAppsAppRoute,
 }

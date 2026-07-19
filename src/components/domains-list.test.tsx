@@ -4,15 +4,13 @@ import {
 	createRouter,
 	RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
-import type { BoxDomain, DomainStatus } from "@/server/relay";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { AppDomainStatus, BoxAppDomains } from "@/server/relay";
 import { DomainsList } from "./domains-list";
 
-const domain = (over: Partial<DomainStatus> = {}): DomainStatus => ({
-	domain: "shop.example.com",
-	dnsProvider: "cloudflare",
-	dnsTokenSet: true,
-	source: "api",
+const appDomain = (over: Partial<AppDomainStatus> = {}): AppDomainStatus => ({
+	domain: "api.octo.dev",
+	app: "api",
 	status: "active",
 	error: "",
 	certNotAfter: null,
@@ -31,26 +29,42 @@ const app = (name: string) => ({
 	status: "running",
 });
 
-const items: BoxDomain[] = [
+const items: BoxAppDomains[] = [
 	{
 		box: {
 			base: "rpi-octocat",
 			owner: "octocat",
 			connected: true,
-			apps: [app("web")],
+			apps: [app("api"), app("web")],
 		},
-		domain: domain(),
+		domains: {
+			api: [appDomain()],
+			web: [],
+		},
 	},
 	{
 		box: { base: "bare-octocat", owner: "octocat", connected: true, apps: [] },
-		domain: null,
+		domains: {},
 	},
 ];
 
-async function renderList(scope = "personal", username = "octocat") {
+async function renderList({
+	scope = "personal",
+	username = "octocat",
+	onAdd = async () => {},
+}: {
+	scope?: string;
+	username?: string;
+	onAdd?: (base: string, appName: string, domain: string) => Promise<void>;
+} = {}) {
 	const root = createRootRoute({
 		component: () => (
-			<DomainsList items={items} scope={scope} username={username} />
+			<DomainsList
+				items={items}
+				scope={scope}
+				username={username}
+				onAdd={onAdd}
+			/>
 		),
 	});
 	const router = createRouter({ routeTree: root });
@@ -59,21 +73,43 @@ async function renderList(scope = "personal", username = "octocat") {
 	render(<RouterProvider router={router as any} />);
 }
 
-test("shows a configured box's domain and the app served under it", async () => {
+test("shows one row per app with its custom domain, dns and cert status", async () => {
 	await renderList();
-	expect(screen.getByText("shop.example.com")).toBeTruthy();
-	expect(screen.getByText("web.shop.example.com")).toBeTruthy();
+	expect(screen.getByText("api.octo.dev")).toBeTruthy();
 	expect(screen.getByText(/dns ok/i)).toBeTruthy();
+	expect(screen.getByText("active")).toBeTruthy();
 });
 
-test("offers 'add domain' for a box with no custom domain", async () => {
+test("counts custom domains and boxes in the subtitle", async () => {
 	await renderList();
-	const link = screen.getByText(/add domain/i);
-	expect(link.getAttribute("href")).toBe("/boxes/bare-octocat");
+	expect(screen.getByText(/1 custom domain/i)).toBeTruthy();
+	expect(screen.getByText(/2 boxes/i)).toBeTruthy();
+});
+
+test("app without a domain gets an inline add-domain flow", async () => {
+	const calls: [string, string, string][] = [];
+	await renderList({
+		onAdd: async (base, appName, domain) => {
+			calls.push([base, appName, domain]);
+		},
+	});
+	fireEvent.click(screen.getByRole("button", { name: /add domain/i }));
+	fireEvent.change(screen.getByLabelText(/domain for web/i), {
+		target: { value: "shop.octo.dev" },
+	});
+	fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+	await waitFor(() => {
+		expect(calls).toEqual([["rpi-octocat", "web", "shop.octo.dev"]]);
+	});
+});
+
+test("box with no apps says so", async () => {
+	await renderList();
+	expect(screen.getByText(/no apps served/i)).toBeTruthy();
 });
 
 test("scopes boxes by owner", async () => {
-	await renderList("acme", "octocat");
+	await renderList({ scope: "acme" });
 	expect(screen.queryByText("rpi-octocat")).toBeNull();
 	expect(screen.getByText(/piper connect/i)).toBeTruthy();
 });

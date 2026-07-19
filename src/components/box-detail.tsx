@@ -25,13 +25,6 @@ export function BoxDetail({
 				{box.connected && (
 					<span className="text-muted-foreground text-sm">Connected</span>
 				)}
-				<Link
-					to="/boxes/$base/import"
-					params={{ base: box.base }}
-					className="ml-auto rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary"
-				>
-					New project
-				</Link>
 			</div>
 			{children}
 			{!box.connected ? (

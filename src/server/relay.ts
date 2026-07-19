@@ -134,27 +134,6 @@ export async function fetchBox(
 	);
 }
 
-export type BoxDomain = { box: BoxWithApps; domain: DomainStatus | null };
-
-// One custom-domain config per box (the domain is box-scoped, not per-app).
-// Offline boxes can't be reached, so their domain is null.
-export async function fetchAllDomains(
-	credential: string,
-): Promise<BoxDomain[]> {
-	const boxes = await fetchAllApps(credential);
-	return Promise.all(
-		boxes.map(async (box) => {
-			if (!box.connected) return { box, domain: null };
-			try {
-				return { box, domain: await getDomain(credential, box.base) };
-			} catch (err) {
-				if (err instanceof BoxOfflineError) return { box, domain: null };
-				throw err;
-			}
-		}),
-	);
-}
-
 export type Deployment = {
 	id: string;
 	pr: number;
@@ -397,36 +376,32 @@ export async function deleteApp(
 
 export type DnsRecord = { type: string; name: string; value: string };
 
-export type DomainStatus = {
+// Per-app custom domains (piper #231): each app can own N domains, globally
+// unique on the box. Distinct from the box-wide BYO apex above.
+export type AppDomainStatus = {
 	domain: string;
-	dnsProvider: string;
-	dnsTokenSet: boolean;
-	source: "api" | "env";
-	status: "" | "issuing" | "active" | "failed";
+	app: string;
+	status: "" | "pending" | "issuing" | "active" | "failed";
 	error: string;
 	certNotAfter: string | null;
 	dnsRecords: DnsRecord[];
 	dnsOk: boolean;
 };
 
-type RawDomainStatus = {
+type RawAppDomainStatus = {
 	domain: string;
-	dns_provider: string;
-	dns_token_set: boolean;
-	source: "api" | "env";
-	status: "" | "issuing" | "active" | "failed";
+	app: string;
+	status: "" | "pending" | "issuing" | "active" | "failed";
 	error: string;
 	cert_not_after?: string | null;
 	dns_records: DnsRecord[];
 	dns_ok: boolean;
 };
 
-function toDomainStatus(raw: RawDomainStatus): DomainStatus {
+function toAppDomainStatus(raw: RawAppDomainStatus): AppDomainStatus {
 	return {
 		domain: raw.domain,
-		dnsProvider: raw.dns_provider,
-		dnsTokenSet: raw.dns_token_set,
-		source: raw.source,
+		app: raw.app,
 		status: raw.status,
 		error: raw.error,
 		certNotAfter: raw.cert_not_after ?? null,
@@ -439,12 +414,15 @@ function toDomainStatus(raw: RawDomainStatus): DomainStatus {
 	};
 }
 
-export async function getDomain(
+export async function fetchAppDomains(
 	credential: string,
 	base: string,
-): Promise<DomainStatus> {
+	app: string,
+): Promise<AppDomainStatus[]> {
 	const res = await fetch(
-		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/domain`,
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			app,
+		)}/domains`,
 		{ headers: { Authorization: `Bearer ${credential}` } },
 	);
 	if (res.status === 401) {
@@ -455,29 +433,29 @@ export async function getDomain(
 	}
 	if (!res.ok) {
 		const msg = (await res.text()).trim();
-		throw new Error(msg || `relay get domain returned ${res.status}`);
+		throw new Error(msg || `relay list app domains returned ${res.status}`);
 	}
-	return toDomainStatus((await res.json()) as RawDomainStatus);
+	const raw = (await res.json()) as RawAppDomainStatus[];
+	return raw.map(toAppDomainStatus);
 }
 
-export async function setDomain(
+export async function addAppDomain(
 	credential: string,
 	base: string,
-	config: { domain: string; provider: string; token: string },
-): Promise<DomainStatus> {
+	app: string,
+	domain: string,
+): Promise<AppDomainStatus> {
 	const res = await fetch(
-		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/domain`,
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			app,
+		)}/domains`,
 		{
-			method: "PUT",
+			method: "POST",
 			headers: {
 				Authorization: `Bearer ${credential}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({
-				domain: config.domain,
-				dns_provider: config.provider,
-				dns_token: config.token,
-			}),
+			body: JSON.stringify({ domain }),
 		},
 	);
 	if (res.status === 401) {
@@ -488,21 +466,22 @@ export async function setDomain(
 	}
 	if (!res.ok) {
 		const msg = (await res.text()).trim();
-		throw new Error(msg || `relay set domain returned ${res.status}`);
+		throw new Error(msg || `relay add app domain returned ${res.status}`);
 	}
-	return toDomainStatus((await res.json()) as RawDomainStatus);
+	return toAppDomainStatus((await res.json()) as RawAppDomainStatus);
 }
 
-export async function removeDomain(
+export async function removeAppDomain(
 	credential: string,
 	base: string,
+	app: string,
+	domain: string,
 ): Promise<void> {
 	const res = await fetch(
-		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/domain`,
-		{
-			method: "DELETE",
-			headers: { Authorization: `Bearer ${credential}` },
-		},
+		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
+			app,
+		)}/domains/${encodeURIComponent(domain)}`,
+		{ method: "DELETE", headers: { Authorization: `Bearer ${credential}` } },
 	);
 	if (res.status === 401) {
 		throw new RelayAuthError("relay rejected the session credential");
@@ -512,8 +491,47 @@ export async function removeDomain(
 	}
 	if (res.status !== 204) {
 		const msg = (await res.text()).trim();
-		throw new Error(msg || `relay remove domain returned ${res.status}`);
+		throw new Error(msg || `relay remove app domain returned ${res.status}`);
 	}
+}
+
+export type BoxAppDomains = {
+	box: BoxWithApps;
+	// app name → its custom domains. Empty record for offline boxes.
+	domains: Record<string, AppDomainStatus[]>;
+};
+
+export async function fetchAllAppDomains(
+	credential: string,
+): Promise<BoxAppDomains[]> {
+	const boxes = await fetchAllApps(credential);
+	return Promise.all(
+		boxes.map(async (box) => {
+			const domains: Record<string, AppDomainStatus[]> = {};
+			if (!box.connected) return { box, domains };
+			try {
+				await Promise.all(
+					box.apps.map(async (app) => {
+						domains[app.name] = await fetchAppDomains(
+							credential,
+							box.base,
+							app.name,
+						);
+					}),
+				);
+			} catch (err) {
+				// The box dropped mid-fetch; report it offline with no domains.
+				if (err instanceof BoxOfflineError) {
+					return {
+						box: { ...box, connected: false, apps: [] },
+						domains: {},
+					};
+				}
+				throw err;
+			}
+			return { box, domains };
+		}),
+	);
 }
 
 export type Org = { slug: string; role: "owner" | "member" };

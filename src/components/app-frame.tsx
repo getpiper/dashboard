@@ -12,8 +12,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
 	const navItems: NavItem[] = username
 		? [
-				{ label: "boxes", to: "/", exact: true },
 				{ label: "apps", to: "/apps" },
+				{ label: "boxes", to: "/boxes" },
 				{ label: "domains", to: "/domains" },
 				...(scope !== "personal"
 					? [

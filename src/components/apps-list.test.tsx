@@ -5,14 +5,14 @@ import {
 	RouterProvider,
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
-import type { BoxWithApps } from "@/server/relay";
+import type { AppDomainStatus, BoxAppDomains } from "@/server/relay";
 import { AppsList, flattenApps } from "./apps-list";
 
 const app = (
 	name: string,
 	status: string,
 	hostname = "",
-): BoxWithApps["apps"][number] => ({
+): BoxAppDomains["box"]["apps"][number] => ({
 	name,
 	port: 8081,
 	repo: "getpiper/x",
@@ -22,26 +22,43 @@ const app = (
 	status,
 });
 
-const boxes: BoxWithApps[] = [
+const domain = (over: Partial<AppDomainStatus> = {}): AppDomainStatus => ({
+	domain: "web.octo.dev",
+	app: "web",
+	status: "active",
+	error: "",
+	certNotAfter: null,
+	dnsRecords: [],
+	dnsOk: true,
+	...over,
+});
+
+const items: BoxAppDomains[] = [
 	{
-		base: "rpi-octocat",
-		owner: "octocat",
-		connected: true,
-		apps: [app("web", "running", "web.public.example")],
+		box: {
+			base: "rpi-octocat",
+			owner: "octocat",
+			connected: true,
+			apps: [app("web", "running", "web.public.example")],
+		},
+		domains: { web: [domain()] },
 	},
 	{
-		base: "rpi-acme",
-		owner: "acme",
-		connected: true,
-		apps: [app("api", "stopped", "")],
+		box: {
+			base: "rpi-acme",
+			owner: "acme",
+			connected: true,
+			apps: [app("api", "stopped", "")],
+		},
+		domains: { api: [] },
 	},
 ];
 
 test("flattenApps flattens and scopes by owner", () => {
 	expect(
-		flattenApps(boxes, "personal", "octocat").map((f) => f.app.name),
+		flattenApps(items, "personal", "octocat").map((f) => f.app.name),
 	).toEqual(["web"]);
-	expect(flattenApps(boxes, "acme", "octocat").map((f) => f.app.name)).toEqual([
+	expect(flattenApps(items, "acme", "octocat").map((f) => f.app.name)).toEqual([
 		"api",
 	]);
 });
@@ -49,7 +66,7 @@ test("flattenApps flattens and scopes by owner", () => {
 async function renderList(scope: string, username: string) {
 	const root = createRootRoute({
 		component: () => (
-			<AppsList boxes={boxes} scope={scope} username={username} />
+			<AppsList items={items} scope={scope} username={username} />
 		),
 	});
 	const router = createRouter({ routeTree: root });
@@ -58,16 +75,28 @@ async function renderList(scope: string, username: string) {
 	render(<RouterProvider router={router as any} />);
 }
 
-test("lists an app with its served URL", async () => {
+test("renders an app card with badge, box, repo, domain and served URL", async () => {
 	await renderList("personal", "octocat");
-	expect(screen.getByText("web")).toBeTruthy();
-	const link = screen.getByText("web.public.example");
-	expect(link.getAttribute("href")).toBe("https://web.public.example");
+	const name = screen.getByText("web");
+	expect(name.getAttribute("href")).toBe("/boxes/rpi-octocat/apps/web");
+	expect(screen.getByText("Live")).toBeTruthy();
+	expect(screen.getByText("rpi-octocat")).toBeTruthy();
+	expect(screen.getByText("getpiper/x@main")).toBeTruthy();
+	expect(screen.getByText("web.octo.dev")).toBeTruthy();
+	const host = screen.getByText("web.public.example");
+	expect(host.getAttribute("href")).toBe("https://web.public.example");
 });
 
 test("shows 'not deployed' for an app with no hostname", async () => {
 	await renderList("acme", "octocat");
 	expect(screen.getByText(/not deployed/i)).toBeTruthy();
+	expect(screen.queryByText("web.octo.dev")).toBeNull();
+});
+
+test("offers a new-app link into the wizard", async () => {
+	await renderList("personal", "octocat");
+	const link = screen.getByText(/new app/i);
+	expect(link.getAttribute("href")).toBe("/apps/new");
 });
 
 test("shows the empty hint when no apps are in scope", async () => {
