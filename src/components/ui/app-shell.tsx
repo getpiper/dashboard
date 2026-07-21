@@ -1,12 +1,19 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 export type NavItem = {
 	label: string;
 	to: string;
 	params?: Record<string, string>;
-	exact?: boolean;
+	// Whether this tab owns the given pathname. Defaults to prefix-matching
+	// `to`; pass a custom predicate for tabs whose pages live under another
+	// tab's path (e.g. app detail sits under /boxes but belongs to apps).
+	isActive?: (pathname: string) => boolean;
 };
+
+function prefixMatch(to: string, pathname: string): boolean {
+	return pathname === to || pathname.startsWith(`${to}/`);
+}
 
 const tabBase =
 	"border-border border-r px-4 py-2.5 text-sm no-underline first:border-l";
@@ -14,20 +21,24 @@ const tabInactive = `${tabBase} text-muted-foreground hover:text-foreground`;
 const tabActive = `${tabBase} bg-primary text-primary-foreground font-medium`;
 
 export function Nav({ items }: { items: NavItem[] }) {
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	return (
 		<nav className="flex">
-			{items.map((item) => (
-				<Link
-					key={item.label}
-					to={item.to}
-					params={item.params}
-					activeOptions={{ exact: item.exact ?? false }}
-					activeProps={{ className: tabActive }}
-					inactiveProps={{ className: tabInactive }}
-				>
-					{item.label}
-				</Link>
-			))}
+			{items.map((item) => {
+				const active = (item.isActive ?? ((p) => prefixMatch(item.to, p)))(
+					pathname,
+				);
+				return (
+					<Link
+						key={item.label}
+						to={item.to}
+						params={item.params}
+						className={active ? tabActive : tabInactive}
+					>
+						{item.label}
+					</Link>
+				);
+			})}
 		</nav>
 	);
 }

@@ -6,14 +6,35 @@ import { useOrgScope } from "./org-scope";
 import { OrgSwitcher } from "./org-switcher";
 import SessionControls from "./SessionControls";
 
+// App detail lives at /boxes/$base/apps/$app but belongs to the apps tab, so
+// it can't be matched by a plain /boxes prefix.
+export function isAppDetailPath(pathname: string): boolean {
+	return /^\/boxes\/[^/]+\/apps\/[^/]+/.test(pathname);
+}
+
+export function appsTabActive(pathname: string): boolean {
+	return (
+		pathname === "/apps" ||
+		pathname.startsWith("/apps/") ||
+		isAppDetailPath(pathname)
+	);
+}
+
+export function boxesTabActive(pathname: string): boolean {
+	return (
+		(pathname === "/boxes" || pathname.startsWith("/boxes/")) &&
+		!isAppDetailPath(pathname)
+	);
+}
+
 export function AppFrame({ children }: { children: ReactNode }) {
 	const { username, scope, setScope, orgs, invites } = useOrgScope();
 	const router = useRouter();
 
 	const navItems: NavItem[] = username
 		? [
-				{ label: "apps", to: "/apps" },
-				{ label: "boxes", to: "/boxes" },
+				{ label: "apps", to: "/apps", isActive: appsTabActive },
+				{ label: "boxes", to: "/boxes", isActive: boxesTabActive },
 				{ label: "domains", to: "/domains" },
 				...(scope !== "personal"
 					? [
