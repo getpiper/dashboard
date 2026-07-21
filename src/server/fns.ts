@@ -16,6 +16,8 @@ import {
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchGithubRepos,
+	fetchGithubStatus,
 	fetchInvites,
 	fetchOrgInvites,
 	fetchOrgMembers,
@@ -134,6 +136,7 @@ export const createAndLinkApp = createServerFn({ method: "POST" })
 			repo: string;
 			branch: string;
 			port?: number;
+			rootDir?: string;
 		}) => d,
 	)
 	.handler(async ({ data }) => {
@@ -141,12 +144,41 @@ export const createAndLinkApp = createServerFn({ method: "POST" })
 		if (!credential) throw redirect({ to: "/login" });
 		try {
 			await createApp(credential, data.base, data.name, data.port ?? 8080);
-			await linkApp(credential, data.base, data.name, data.repo, data.branch);
+			await linkApp(
+				credential,
+				data.base,
+				data.name,
+				data.repo,
+				data.branch,
+				data.rootDir,
+			);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;
 		}
 	});
+
+export const getGithubStatus = createServerFn().handler(async () => {
+	const credential = getCookie("piper_session");
+	if (!credential) throw redirect({ to: "/login" });
+	try {
+		return await fetchGithubStatus(credential);
+	} catch (err) {
+		if (err instanceof RelayAuthError) dropSessionAndRedirect();
+		throw err;
+	}
+});
+
+export const getGithubRepos = createServerFn().handler(async () => {
+	const credential = getCookie("piper_session");
+	if (!credential) throw redirect({ to: "/login" });
+	try {
+		return await fetchGithubRepos(credential);
+	} catch (err) {
+		if (err instanceof RelayAuthError) dropSessionAndRedirect();
+		throw err;
+	}
+});
 
 export const stopAppFn = createServerFn({ method: "POST" })
 	.validator((d: { base: string; name: string }) => d)

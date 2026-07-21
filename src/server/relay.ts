@@ -259,6 +259,71 @@ export async function exchangeGithub(
 	}
 }
 
+// Brokered GitHub App (piper #293/#317): the relay holds one App and reports
+// whether it's installed for the caller's account plus the install/authorize
+// URL. Distinct from the per-box BYO manifest flow above.
+export type GithubStatus = {
+	githubApp: boolean;
+	installed: boolean;
+	account: string;
+	installUrl: string;
+};
+
+export async function fetchGithubStatus(
+	credential: string,
+): Promise<GithubStatus> {
+	const res = await fetch(`${relayUrl()}/v1/github/status`, {
+		headers: { Authorization: `Bearer ${credential}` },
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		throw new Error(`relay /v1/github/status returned ${res.status}`);
+	}
+	const body = (await res.json()) as {
+		github_app: boolean;
+		installed: boolean;
+		account: string;
+		install_url: string;
+	};
+	return {
+		githubApp: body.github_app,
+		installed: body.installed,
+		account: body.account,
+		installUrl: body.install_url,
+	};
+}
+
+export type GithubRepo = {
+	fullName: string;
+	visibility: string;
+	pushedAt: string;
+};
+
+export async function fetchGithubRepos(
+	credential: string,
+): Promise<GithubRepo[]> {
+	const res = await fetch(`${relayUrl()}/v1/github/repos`, {
+		headers: { Authorization: `Bearer ${credential}` },
+	});
+	if (res.status === 401) {
+		throw new RelayAuthError("relay rejected the session credential");
+	}
+	if (!res.ok) {
+		const msg = (await res.text()).trim();
+		throw new Error(msg || `relay /v1/github/repos returned ${res.status}`);
+	}
+	const body = (await res.json()) as {
+		repos: { full_name: string; visibility: string; pushed_at: string }[];
+	};
+	return body.repos.map((r) => ({
+		fullName: r.full_name,
+		visibility: r.visibility,
+		pushedAt: r.pushed_at,
+	}));
+}
+
 export async function createApp(
 	credential: string,
 	base: string,
@@ -296,6 +361,7 @@ export async function linkApp(
 	name: string,
 	repo: string,
 	branch: string,
+	rootDir?: string,
 ): Promise<void> {
 	const res = await fetch(
 		`${relayUrl()}/agents/${encodeURIComponent(base)}/v1/apps/${encodeURIComponent(
@@ -307,7 +373,9 @@ export async function linkApp(
 				Authorization: `Bearer ${credential}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ repo, branch }),
+			body: JSON.stringify(
+				rootDir ? { repo, branch, root_dir: rootDir } : { repo, branch },
+			),
 		},
 	);
 	if (res.status === 401) {

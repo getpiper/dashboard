@@ -25,16 +25,26 @@ const boxes = [
 	{ base: "def-zoe.public.example", connected: true },
 ];
 
+const byoStatus = {
+	githubApp: false,
+	installed: false,
+	account: "",
+	installUrl: "",
+};
+
 // ImportWizard renders <Link> (step 3), which needs a router context to mount.
 async function renderWizard(props: Partial<ImportWizardProps> = {}) {
 	const full: ImportWizardProps = {
 		boxes,
 		initialBase: null,
 		pendingCode: null,
+		status: byoStatus,
+		getRepos: async () => [],
 		getManifest: async () => '{"name":"piper-x"}',
 		exchange: noopAsync,
 		createAndLink: noopAsync,
 		submitManifest: () => {},
+		navigateTo: () => {},
 		...props,
 	};
 	const rootRoute = createRootRoute({
@@ -187,4 +197,110 @@ test("a failed create shows an inline error and stays on the Create step", async
 	});
 	expect(screen.getByText(/name reserved/i)).toBeTruthy();
 	expect(screen.getByRole("heading", { name: /create app/i })).toBeTruthy();
+});
+
+// ---- Brokered (relay-held GitHub App) mode ----
+
+const brokeredInstalled = {
+	githubApp: true,
+	installed: true,
+	account: "octo",
+	installUrl: "https://github.com/apps/piper/installations/new",
+};
+
+const repos = [
+	{
+		fullName: "octo/api",
+		visibility: "private",
+		pushedAt: "2026-07-20T00:00:00Z",
+	},
+	{
+		fullName: "octo/web",
+		visibility: "public",
+		pushedAt: "2026-07-19T00:00:00Z",
+	},
+];
+
+test("brokered + installed: shows the installed account and no manifest form", async () => {
+	await renderWizard({ status: brokeredInstalled });
+	expect(await screen.findByText(/installed for/i)).toBeTruthy();
+	expect(screen.getByText("octo")).toBeTruthy();
+	// The BYO manifest affordances are gone in brokered mode.
+	expect(screen.queryByLabelText(/organization/i)).toBeNull();
+	expect(
+		screen.queryByRole("button", { name: /^connect github$/i }),
+	).toBeNull();
+});
+
+test("brokered + not installed: Authorize & install navigates to the install URL", async () => {
+	const navigateTo = mock(() => {});
+	await renderWizard({
+		status: { ...brokeredInstalled, installed: false },
+		navigateTo,
+	});
+	fireEvent.click(
+		await screen.findByRole("button", { name: /authorize & install/i }),
+	);
+	expect(navigateTo).toHaveBeenCalledWith(
+		"https://github.com/apps/piper/installations/new",
+	);
+});
+
+test("brokered: picking a repo auto-fills the app name and links it", async () => {
+	const createAndLink = mock(async () => {});
+	const getRepos = mock(async () => repos);
+	await renderWizard({
+		status: brokeredInstalled,
+		getRepos,
+		createAndLink,
+	});
+	// Connect → Create
+	fireEvent.click(await screen.findByRole("button", { name: /continue/i }));
+	// Open the repo picker and choose one.
+	fireEvent.click(
+		await screen.findByRole("button", { name: /select a repository/i }),
+	);
+	fireEvent.click(await screen.findByText("octo/api"));
+	// App name is derived from the repo.
+	expect((screen.getByLabelText(/app name/i) as HTMLInputElement).value).toBe(
+		"api",
+	);
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /create & link/i }));
+	});
+	expect(createAndLink).toHaveBeenCalledWith("abc-zoe.public.example", {
+		name: "api",
+		repo: "octo/api",
+		branch: "main",
+		port: undefined,
+		rootDir: undefined,
+	});
+});
+
+test("brokered: the Advanced root directory is passed through as rootDir", async () => {
+	const createAndLink = mock(async () => {});
+	await renderWizard({
+		status: brokeredInstalled,
+		getRepos: async () => repos,
+		createAndLink,
+	});
+	fireEvent.click(await screen.findByRole("button", { name: /continue/i }));
+	fireEvent.click(
+		await screen.findByRole("button", { name: /select a repository/i }),
+	);
+	fireEvent.click(await screen.findByText("octo/web"));
+	fireEvent.click(screen.getByRole("button", { name: /advanced/i }));
+	fireEvent.change(screen.getByLabelText(/root directory/i), {
+		target: { value: "apps/web" },
+	});
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /create & link/i }));
+	});
+	expect(createAndLink).toHaveBeenCalledWith("abc-zoe.public.example", {
+		name: "web",
+		repo: "octo/web",
+		branch: "main",
+		port: undefined,
+		rootDir: "apps/web",
+	});
 });
