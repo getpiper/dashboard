@@ -1,6 +1,6 @@
 import { expect, jest, mock, test } from "bun:test";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { App, Deployment } from "@/server/relay";
+import type { App, AppDomainStatus, Deployment } from "@/server/relay";
 import { AppDetail } from "./app-detail";
 
 const app: App = {
@@ -24,6 +24,82 @@ const dep = (over: Partial<Deployment>): Deployment => ({
 const noop = () => {};
 const emptyLogs = async () => "";
 const noopAsync = async () => {};
+
+const domain = (over: Partial<AppDomainStatus>): AppDomainStatus => ({
+	domain: "shop.octo.dev",
+	app: "web",
+	status: "active",
+	error: "",
+	certNotAfter: null,
+	dnsRecords: [],
+	dnsOk: true,
+	...over,
+});
+
+test("links a healthy custom domain without a warning", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			domains={[
+				domain({ domain: "shop.octo.dev", status: "active", dnsOk: true }),
+			]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
+		/>,
+	);
+	const link = screen.getByText("shop.octo.dev");
+	expect(link.getAttribute("href")).toBe("https://shop.octo.dev");
+	// Healthy domains stay clean — no cert/dns status is surfaced.
+	expect(screen.queryByText(/dns/i)).toBeNull();
+	expect(screen.queryByText(/active/i)).toBeNull();
+});
+
+test("surfaces cert and dns status when a custom domain is unhealthy", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			domains={[
+				domain({ domain: "shop.octo.dev", status: "issuing", dnsOk: false }),
+			]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
+		/>,
+	);
+	expect(screen.getByText("shop.octo.dev")).toBeTruthy();
+	expect(screen.getByText(/issuing/i)).toBeTruthy();
+	expect(screen.getByText(/dns pending/i)).toBeTruthy();
+});
+
+test("renders a line per custom domain", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			domains={[
+				domain({ domain: "a.octo.dev" }),
+				domain({ domain: "b.octo.dev" }),
+			]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onDelete={noopAsync}
+		/>,
+	);
+	expect(screen.getByText("a.octo.dev")).toBeTruthy();
+	expect(screen.getByText("b.octo.dev")).toBeTruthy();
+});
 
 test("renders the app header with repo and branch", () => {
 	render(

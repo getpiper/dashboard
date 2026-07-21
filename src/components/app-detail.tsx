@@ -1,8 +1,9 @@
 import { isRedirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { inputClass } from "@/components/ui/field";
+import { type DeviceStatus, StatusDot } from "@/components/ui/status-dot";
 import { relativeTime } from "@/lib/relative-time";
-import type { App, Deployment } from "@/server/relay";
+import type { App, AppDomainStatus, Deployment } from "@/server/relay";
 import { StatusPill } from "./status-pill";
 
 const actionBtn =
@@ -15,17 +16,57 @@ export type AppDetailProps = {
 	connected: boolean;
 	app: App | null;
 	deployments: Deployment[];
+	domains?: AppDomainStatus[];
 	fetchLogs: (id: string) => Promise<string>;
 	refresh: () => void;
 	onStop: () => Promise<void>;
 	onDelete: () => Promise<void>;
 };
 
+function domainDeviceStatus(status: string): DeviceStatus {
+	switch (status) {
+		case "active":
+			return "ok";
+		case "pending":
+		case "issuing":
+			return "warn";
+		case "failed":
+			return "danger";
+		default:
+			return "idle";
+	}
+}
+
+function DomainLine({ d }: { d: AppDomainStatus }) {
+	// Healthy domains read clean; only surface cert/dns status when something
+	// still needs attention (mirrors the apps grid / domains screens).
+	const healthy = d.status === "active" && d.dnsOk;
+	return (
+		<div className="flex flex-wrap items-center gap-2.5 text-[13px]">
+			<a href={`https://${d.domain}`} className="text-primary no-underline">
+				{d.domain}
+			</a>
+			{!healthy && (
+				<>
+					<StatusDot status={domainDeviceStatus(d.status)}>
+						{d.status || "pending"}
+					</StatusDot>
+					<span className="text-status-idle">·</span>
+					<span className="text-muted-foreground">
+						{d.dnsOk ? "dns ok" : "dns pending"}
+					</span>
+				</>
+			)}
+		</div>
+	);
+}
+
 export function AppDetail({
 	appName,
 	connected,
 	app,
 	deployments,
+	domains = [],
 	fetchLogs,
 	refresh,
 	onStop,
@@ -67,6 +108,9 @@ export function AppDetail({
 						Not deployed yet
 					</span>
 				)}
+				{domains.map((d) => (
+					<DomainLine key={d.domain} d={d} />
+				))}
 				<p className="text-muted-foreground text-sm">
 					{app.repo} · {app.branch}
 				</p>

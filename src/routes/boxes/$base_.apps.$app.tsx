@@ -3,6 +3,7 @@ import { AppDetail } from "@/components/app-detail";
 import { RelayError } from "@/components/relay-error";
 import {
 	deleteAppFn,
+	getAppDomains,
 	getBox,
 	getDeploymentLogs,
 	getDeployments,
@@ -15,10 +16,13 @@ export const Route = createFileRoute("/boxes/$base_/apps/$app")({
 		const app = box.connected
 			? (box.apps.find((a) => a.name === params.app) ?? null)
 			: null;
-		const deployments = app
-			? await getDeployments({ data: { base: params.base, app: params.app } })
-			: [];
-		return { box, app, deployments };
+		const [deployments, domains] = app
+			? await Promise.all([
+					getDeployments({ data: { base: params.base, app: params.app } }),
+					getAppDomains({ data: { base: params.base, app: params.app } }),
+				])
+			: [[], []];
+		return { box, app, deployments, domains };
 	},
 	component: AppDetailPage,
 	errorComponent: RelayError,
@@ -26,7 +30,7 @@ export const Route = createFileRoute("/boxes/$base_/apps/$app")({
 
 function AppDetailPage() {
 	const { base, app: appName } = Route.useParams();
-	const { box, app, deployments } = Route.useLoaderData();
+	const { box, app, deployments, domains } = Route.useLoaderData();
 	const router = useRouter();
 	return (
 		<AppDetail
@@ -34,6 +38,7 @@ function AppDetailPage() {
 			connected={box.connected}
 			app={app}
 			deployments={deployments}
+			domains={domains}
 			fetchLogs={async (id) => {
 				try {
 					return await getDeploymentLogs({

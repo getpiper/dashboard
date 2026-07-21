@@ -12,6 +12,7 @@ import {
 	exchangeGithub,
 	fetchAllAppDomains,
 	fetchAllApps,
+	fetchAppDomains,
 	fetchBox,
 	fetchDeploymentLogs,
 	fetchDeployments,
@@ -182,6 +183,19 @@ export const getAppDomainsFn = createServerFn().handler(async () => {
 		throw err;
 	}
 });
+
+export const getAppDomains = createServerFn()
+	.validator((d: { base: string; app: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await fetchAppDomains(credential, data.base, data.app);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
 
 export const addAppDomainFn = createServerFn({ method: "POST" })
 	.validator((d: { base: string; app: string; domain: string }) => d)
