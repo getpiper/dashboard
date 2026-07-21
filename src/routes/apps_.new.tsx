@@ -7,6 +7,8 @@ import {
 	exchangeGithubApp,
 	getApps,
 	getGithubManifest,
+	getGithubRepos,
+	getGithubStatus,
 } from "@/server/fns";
 
 export const Route = createFileRoute("/apps_/new")({
@@ -16,13 +18,16 @@ export const Route = createFileRoute("/apps_/new")({
 		code: typeof search.code === "string" ? search.code : undefined,
 		box: typeof search.box === "string" ? search.box : undefined,
 	}),
-	loader: () => getApps(),
+	loader: async () => {
+		const [boxes, status] = await Promise.all([getApps(), getGithubStatus()]);
+		return { boxes, status };
+	},
 	component: NewAppPage,
 	errorComponent: RelayError,
 });
 
 function NewAppPage() {
-	const boxes = Route.useLoaderData();
+	const { boxes, status } = Route.useLoaderData();
 	const { code, box } = Route.useSearch();
 	const { scope, username } = useOrgScope();
 	const scoped = boxes
@@ -35,6 +40,8 @@ function NewAppPage() {
 			boxes={scoped}
 			initialBase={box ?? null}
 			pendingCode={code ?? null}
+			status={status}
+			getRepos={() => getGithubRepos()}
 			getManifest={(base) =>
 				getGithubManifest({
 					data: {

@@ -14,6 +14,8 @@ import {
 	fetchBoxes,
 	fetchDeploymentLogs,
 	fetchDeployments,
+	fetchGithubRepos,
+	fetchGithubStatus,
 	fetchInvites,
 	fetchOrgInvites,
 	fetchOrgMembers,
@@ -568,6 +570,104 @@ test("linkApp surfaces the box message on 404 (unknown app)", async () => {
 	expect(
 		linkApp("cred-1", "abc-zoe.public.example", "gone", "r", "main"),
 	).rejects.toThrow(/unknown app/);
+});
+
+test("linkApp includes root_dir only when a monorepo subpath is given", async () => {
+	let seenBody = "";
+	globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+		seenBody = String(init?.body);
+		return new Response(null, { status: 204 });
+	}) as typeof fetch;
+
+	await linkApp("cred-1", "b", "web", "getpiper/example", "main", "apps/web");
+	expect(JSON.parse(seenBody)).toEqual({
+		repo: "getpiper/example",
+		branch: "main",
+		root_dir: "apps/web",
+	});
+
+	await linkApp("cred-1", "b", "web", "getpiper/example", "main");
+	expect(JSON.parse(seenBody)).toEqual({
+		repo: "getpiper/example",
+		branch: "main",
+	});
+});
+
+test("fetchGithubStatus maps the status envelope to camelCase", async () => {
+	let seenUrl = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return Response.json({
+			github_app: true,
+			installed: true,
+			account: "octo",
+			install_url: "https://github.com/apps/piper/installations/new",
+		});
+	}) as typeof fetch;
+
+	const status = await fetchGithubStatus("cred-1");
+	expect(seenUrl).toBe("https://relay.test/v1/github/status");
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+	expect(status).toEqual({
+		githubApp: true,
+		installed: true,
+		account: "octo",
+		installUrl: "https://github.com/apps/piper/installations/new",
+	});
+});
+
+test("fetchGithubStatus raises RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	await expect(fetchGithubStatus("cred-1")).rejects.toBeInstanceOf(
+		RelayAuthError,
+	);
+});
+
+test("fetchGithubRepos maps the repos envelope to GithubRepo[]", async () => {
+	let seenUrl = "";
+	globalThis.fetch = (async (url: RequestInfo | URL) => {
+		seenUrl = String(url);
+		return Response.json({
+			repos: [
+				{
+					full_name: "octo/api",
+					visibility: "private",
+					pushed_at: "2026-07-20T00:00:00Z",
+				},
+				{
+					full_name: "octo/web",
+					visibility: "public",
+					pushed_at: "2026-07-19T00:00:00Z",
+				},
+			],
+		});
+	}) as typeof fetch;
+
+	const repos = await fetchGithubRepos("cred-1");
+	expect(seenUrl).toBe("https://relay.test/v1/github/repos");
+	expect(repos).toEqual([
+		{
+			fullName: "octo/api",
+			visibility: "private",
+			pushedAt: "2026-07-20T00:00:00Z",
+		},
+		{
+			fullName: "octo/web",
+			visibility: "public",
+			pushedAt: "2026-07-19T00:00:00Z",
+		},
+	]);
+});
+
+test("fetchGithubRepos raises RelayAuthError on 401", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	await expect(fetchGithubRepos("cred-1")).rejects.toBeInstanceOf(
+		RelayAuthError,
+	);
 });
 
 test("stopApp POSTs to the stop path and resolves on 204", async () => {
