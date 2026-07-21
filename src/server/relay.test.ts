@@ -26,6 +26,7 @@ import {
 	removeOrgMember,
 	revokeOrgInvite,
 	setOrgMemberRole,
+	startApp,
 	stopApp,
 } from "./relay";
 
@@ -601,6 +602,42 @@ test("stopApp surfaces the box message on 404 (unknown app)", async () => {
 	globalThis.fetch = (async () =>
 		new Response("unknown app", { status: 404 })) as unknown as typeof fetch;
 	expect(stopApp("cred-1", "b", "gone")).rejects.toThrow(/unknown app/);
+});
+
+test("startApp POSTs to the start path and resolves on 204", async () => {
+	let seenUrl = "";
+	let seenMethod = "";
+	let seenAuth: string | null = null;
+	globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+		seenUrl = String(url);
+		seenMethod = String(init?.method);
+		seenAuth = new Headers(init?.headers).get("Authorization");
+		return new Response(null, { status: 204 });
+	}) as typeof fetch;
+
+	await startApp("cred-1", "abc-zoe.public.example", "web");
+	expect(seenUrl).toBe(
+		"https://relay.test/agents/abc-zoe.public.example/v1/apps/web/start",
+	);
+	expect(seenMethod).toBe("POST");
+	expect<string | null>(seenAuth).toBe("Bearer cred-1");
+});
+
+test("startApp throws RelayAuthError on 401 and BoxOfflineError on 503", async () => {
+	globalThis.fetch = (async () =>
+		new Response("nope", { status: 401 })) as unknown as typeof fetch;
+	expect(startApp("bad", "b", "web")).rejects.toBeInstanceOf(RelayAuthError);
+	globalThis.fetch = (async () =>
+		new Response("offline", { status: 503 })) as unknown as typeof fetch;
+	expect(startApp("cred-1", "b", "web")).rejects.toBeInstanceOf(
+		BoxOfflineError,
+	);
+});
+
+test("startApp surfaces the box message on 404 (unknown app)", async () => {
+	globalThis.fetch = (async () =>
+		new Response("unknown app", { status: 404 })) as unknown as typeof fetch;
+	expect(startApp("cred-1", "b", "gone")).rejects.toThrow(/unknown app/);
 });
 
 test("deleteApp DELETEs the app path and resolves on 204", async () => {

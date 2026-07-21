@@ -7,6 +7,7 @@ import {
 	getBox,
 	getDeploymentLogs,
 	getDeployments,
+	startAppFn,
 	stopAppFn,
 } from "@/server/fns";
 
@@ -54,6 +55,10 @@ function AppDetailPage() {
 			}}
 			onStop={async () => {
 				await stopAppFn({ data: { base, name: appName } });
+				router.invalidate();
+			}}
+			onStart={async () => {
+				await startAppFn({ data: { base, name: appName } });
 				router.invalidate();
 			}}
 			onDelete={async () => {

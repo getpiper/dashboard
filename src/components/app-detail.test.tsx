@@ -302,6 +302,69 @@ test("hides Stop when the app is already stopped", () => {
 	expect(screen.queryByRole("button", { name: /^stop$/i })).toBeNull();
 });
 
+test("shows Start (not Stop) when the app is stopped and calls onStart", async () => {
+	const onStart = mock(async () => {});
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={{ ...app, status: "stopped" }}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onStart={onStart}
+			onDelete={noopAsync}
+		/>,
+	);
+	expect(screen.queryByRole("button", { name: /^stop$/i })).toBeNull();
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /^start$/i }));
+	});
+	expect(onStart).toHaveBeenCalledTimes(1);
+});
+
+test("hides Start when the app is running", () => {
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={app}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onStart={noopAsync}
+			onDelete={noopAsync}
+		/>,
+	);
+	expect(screen.queryByRole("button", { name: /^start$/i })).toBeNull();
+	expect(screen.getByRole("button", { name: /^stop$/i })).toBeTruthy();
+});
+
+test("a rejected onStart renders the error message", async () => {
+	const onStart = async () => {
+		throw new Error("boom start");
+	};
+	render(
+		<AppDetail
+			appName="web"
+			connected={true}
+			app={{ ...app, status: "stopped" }}
+			deployments={[]}
+			fetchLogs={emptyLogs}
+			refresh={noop}
+			onStop={noopAsync}
+			onStart={onStart}
+			onDelete={noopAsync}
+		/>,
+	);
+	await act(async () => {
+		fireEvent.click(screen.getByRole("button", { name: /^start$/i }));
+	});
+	expect(screen.getByText(/boom start/i)).toBeTruthy();
+});
+
 test("Delete stays disabled until the exact app name is typed, then calls onDelete", async () => {
 	const onDelete = mock(async () => {});
 	render(
