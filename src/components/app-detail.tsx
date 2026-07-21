@@ -8,6 +8,8 @@ import { StatusPill } from "./status-pill";
 
 const actionBtn =
 	"rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50";
+const primaryBtn =
+	"rounded-[2px] bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50";
 const dangerBtn =
 	"rounded-[2px] bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
 
@@ -20,6 +22,7 @@ export type AppDetailProps = {
 	fetchLogs: (id: string) => Promise<string>;
 	refresh: () => void;
 	onStop: () => Promise<void>;
+	onStart?: () => Promise<void>;
 	onDelete: () => Promise<void>;
 };
 
@@ -70,6 +73,7 @@ export function AppDetail({
 	fetchLogs,
 	refresh,
 	onStop,
+	onStart = async () => {},
 	onDelete,
 }: AppDetailProps) {
 	if (!connected) {
@@ -118,6 +122,7 @@ export function AppDetail({
 					name={app.name}
 					status={app.status}
 					onStop={onStop}
+					onStart={onStart}
 					onDelete={onDelete}
 				/>
 			</div>
@@ -148,14 +153,17 @@ function AppActions({
 	name,
 	status,
 	onStop,
+	onStart,
 	onDelete,
 }: {
 	name: string;
 	status: string;
 	onStop: () => Promise<void>;
+	onStart: () => Promise<void>;
 	onDelete: () => Promise<void>;
 }) {
 	const [stopping, setStopping] = useState(false);
+	const [starting, setStarting] = useState(false);
 	const [confirming, setConfirming] = useState(false);
 	const [typed, setTyped] = useState("");
 	const [deleting, setDeleting] = useState(false);
@@ -171,6 +179,19 @@ function AppActions({
 			setError((err as Error).message || "Couldn't stop the app.");
 		} finally {
 			setStopping(false);
+		}
+	}
+
+	async function handleStart() {
+		setError(null);
+		setStarting(true);
+		try {
+			await onStart();
+		} catch (err) {
+			if (isRedirect(err)) throw err;
+			setError((err as Error).message || "Couldn't start the app.");
+		} finally {
+			setStarting(false);
 		}
 	}
 
@@ -191,7 +212,16 @@ function AppActions({
 	return (
 		<div className="mt-1 flex flex-col gap-2">
 			<div className="flex flex-wrap items-center gap-2">
-				{status !== "stopped" && (
+				{status === "stopped" ? (
+					<button
+						type="button"
+						onClick={handleStart}
+						disabled={starting}
+						className={primaryBtn}
+					>
+						{starting ? "Starting…" : "Start"}
+					</button>
+				) : (
 					<button
 						type="button"
 						onClick={handleStop}

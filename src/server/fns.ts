@@ -28,6 +28,7 @@ import {
 	removeOrgMember,
 	revokeOrgInvite,
 	setOrgMemberRole,
+	startApp,
 	stopApp,
 } from "./relay";
 
@@ -154,6 +155,19 @@ export const stopAppFn = createServerFn({ method: "POST" })
 		if (!credential) throw redirect({ to: "/login" });
 		try {
 			await stopApp(credential, data.base, data.name);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
+
+export const startAppFn = createServerFn({ method: "POST" })
+	.validator((d: { base: string; name: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			await startApp(credential, data.base, data.name);
 		} catch (err) {
 			if (err instanceof RelayAuthError) dropSessionAndRedirect();
 			throw err;
