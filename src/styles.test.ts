@@ -20,3 +20,11 @@ test("JetBrains Mono is loaded and set as the terminal font", () => {
 	expect(css).toContain("JetBrains+Mono"); // @import
 	expect(css).toContain("--font-mono");
 });
+
+test("the base link color lives in @layer base so text-color utilities win", () => {
+	// An unlayered `a { color }` rule outranks Tailwind's layered utilities,
+	// which would force every link amber (e.g. an invisible active nav tab).
+	const layerBase = css.slice(css.indexOf("@layer base"));
+	expect(layerBase).toContain("a {");
+	expect(layerBase).toContain("color: var(--primary)");
+});

@@ -10,7 +10,7 @@ import { render, screen } from "@testing-library/react";
 import { AppShell, Nav, type NavItem } from "./app-shell";
 
 const items: NavItem[] = [
-	{ label: "boxes", to: "/", exact: true },
+	{ label: "boxes", to: "/" },
 	{ label: "apps", to: "/apps" },
 ];
 

@@ -109,14 +109,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: var(--primary);
-  text-decoration: none;
-  transition: color 150ms ease;
-}
+/* In @layer base so a per-link text-color utility (e.g. an active nav tab's
+   text-primary-foreground) overrides this default instead of losing to it. */
+@layer base {
+  a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
 
-a:hover {
-  text-decoration: underline;
+  a:hover {
+    text-decoration: underline;
+  }
 }
 
 code {
