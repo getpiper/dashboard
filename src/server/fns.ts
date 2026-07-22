@@ -169,16 +169,18 @@ export const getGithubStatus = createServerFn().handler(async () => {
 	}
 });
 
-export const getGithubRepos = createServerFn().handler(async () => {
-	const credential = getCookie("piper_session");
-	if (!credential) throw redirect({ to: "/login" });
-	try {
-		return await fetchGithubRepos(credential);
-	} catch (err) {
-		if (err instanceof RelayAuthError) dropSessionAndRedirect();
-		throw err;
-	}
-});
+export const getGithubRepos = createServerFn()
+	.validator((d: { installationId: string }) => d)
+	.handler(async ({ data }) => {
+		const credential = getCookie("piper_session");
+		if (!credential) throw redirect({ to: "/login" });
+		try {
+			return await fetchGithubRepos(credential, data.installationId);
+		} catch (err) {
+			if (err instanceof RelayAuthError) dropSessionAndRedirect();
+			throw err;
+		}
+	});
 
 export const stopAppFn = createServerFn({ method: "POST" })
 	.validator((d: { base: string; name: string }) => d)

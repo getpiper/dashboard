@@ -41,7 +41,9 @@ function NewAppPage() {
 			initialBase={box ?? null}
 			pendingCode={code ?? null}
 			status={status}
-			getRepos={() => getGithubRepos()}
+			getRepos={(installationId) =>
+				getGithubRepos({ data: { installationId } })
+			}
 			getManifest={(base) =>
 				getGithubManifest({
 					data: {

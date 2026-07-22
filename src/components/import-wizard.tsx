@@ -46,7 +46,7 @@ export type ImportWizardProps = {
 	pendingCode: string | null;
 	// Brokered GitHub App state (relay-held). githubApp=false → BYO manifest flow.
 	status: GithubStatus;
-	getRepos: () => Promise<GithubRepo[]>;
+	getRepos: (installationId: string) => Promise<GithubRepo[]>;
 	getManifest: (base: string) => Promise<string>;
 	exchange: (base: string, code: string) => Promise<void>;
 	createAndLink: (base: string, input: CreateAndLinkInput) => Promise<void>;
@@ -299,6 +299,16 @@ export function ImportWizard({
 	const [error, setError] = useState<string | null>(null);
 	const exchanged = useRef(false);
 
+	// Which App installation the repo list is drawn from. One installation →
+	// auto-selected; several → chosen on the Connect step.
+	const [selectedInstallation, setSelectedInstallation] = useState<
+		string | null
+	>(() =>
+		brokered && status.installations.length === 1
+			? status.installations[0].installationId
+			: null,
+	);
+
 	// Brokered create state.
 	const [repos, setRepos] = useState<GithubRepo[] | null>(null);
 	const [reposLoading, setReposLoading] = useState(false);
@@ -331,17 +341,23 @@ export function ImportWizard({
 	// Load the installation's repositories once, when the brokered create step
 	// is first reached.
 	useEffect(() => {
-		if (!brokered || step !== "create" || fetchedRepos.current) return;
+		if (
+			!brokered ||
+			step !== "create" ||
+			!selectedInstallation ||
+			fetchedRepos.current
+		)
+			return;
 		fetchedRepos.current = true;
 		setReposLoading(true);
-		getRepos()
+		getRepos(selectedInstallation)
 			.then((rs) => setRepos(rs))
 			.catch((err) => {
 				if (isRedirect(err)) throw err;
 				setError("Couldn't load repositories. Try again.");
 			})
 			.finally(() => setReposLoading(false));
-	}, [brokered, step, getRepos]);
+	}, [brokered, step, selectedInstallation, getRepos]);
 
 	function pickRepo(repo: GithubRepo) {
 		setSelectedRepo(repo.fullName);
@@ -435,27 +451,64 @@ export function ImportWizard({
 									can deploy — one screen, no manual install.
 								</p>
 							</div>
-							{status.installed ? (
+							{status.installations.length > 0 ? (
 								<>
-									<div className="flex items-center gap-2.5 rounded-[2px] border border-border bg-secondary px-3.5 py-3 text-sm">
-										<span className="text-status-ok">●</span>
-										<span className="text-foreground">
-											Piper App installed for{" "}
-											<span className="text-primary">{status.account}</span>
-										</span>
-										<button
-											type="button"
-											onClick={() => navigateTo(status.installUrl)}
-											className="ml-auto text-muted-foreground underline"
-										>
-											Use another account
-										</button>
-									</div>
+									{status.installations.length === 1 ? (
+										<div className="flex items-center gap-2.5 rounded-[2px] border border-border bg-secondary px-3.5 py-3 text-sm">
+											<span className="text-status-ok">●</span>
+											<span className="text-foreground">
+												Piper App installed for{" "}
+												<span className="text-primary">
+													{status.installations[0].targetLogin}
+												</span>
+											</span>
+										</div>
+									) : (
+										<div className="flex flex-col gap-1.5 text-[13px] text-muted-foreground">
+											Installed on
+											<div className="flex flex-col gap-1">
+												{status.installations.map((inst) => {
+													const picked =
+														selectedInstallation === inst.installationId;
+													return (
+														<button
+															key={inst.installationId}
+															type="button"
+															onClick={() =>
+																setSelectedInstallation(inst.installationId)
+															}
+															className={`flex items-center gap-2.5 rounded-[2px] border px-3.5 py-2.5 text-left text-sm ${
+																picked
+																	? "border-primary bg-secondary"
+																	: "border-border hover:bg-secondary"
+															}`}
+														>
+															<span className="text-status-ok">●</span>
+															<span className="flex-1 text-primary">
+																{inst.targetLogin}
+															</span>
+															<span className="text-[11px] text-muted-foreground uppercase tracking-wide">
+																{inst.targetType}
+															</span>
+															<span className="w-2.5 text-primary">
+																{picked ? "✓" : ""}
+															</span>
+														</button>
+													);
+												})}
+											</div>
+										</div>
+									)}
 									<div className="flex items-center gap-2">
 										<button
 											type="button"
 											onClick={() => setStep("create")}
-											className={primaryBtn}
+											disabled={!selectedInstallation}
+											className={`${primaryBtn} ${
+												selectedInstallation
+													? ""
+													: "cursor-not-allowed opacity-50"
+											}`}
 										>
 											Continue
 										</button>

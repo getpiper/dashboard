@@ -259,13 +259,19 @@ export async function exchangeGithub(
 	}
 }
 
-// Brokered GitHub App (piper #293/#317): the relay holds one App and reports
-// whether it's installed for the caller's account plus the install/authorize
-// URL. Distinct from the per-box BYO manifest flow above.
+// Brokered GitHub App (piper #293/#317/#322): the relay holds one App and
+// reports every installation linked to the caller's account (each naming the
+// user/org it's installed on) plus the install/authorize URL. Distinct from the
+// per-box BYO manifest flow above.
+export type GithubInstallation = {
+	installationId: string;
+	targetType: string;
+	targetLogin: string;
+};
+
 export type GithubStatus = {
 	githubApp: boolean;
-	installed: boolean;
-	account: string;
+	installations: GithubInstallation[];
 	installUrl: string;
 };
 
@@ -283,14 +289,20 @@ export async function fetchGithubStatus(
 	}
 	const body = (await res.json()) as {
 		github_app: boolean;
-		installed: boolean;
-		account: string;
+		installations: {
+			installation_id: string;
+			target_type: string;
+			target_login: string;
+		}[];
 		install_url: string;
 	};
 	return {
 		githubApp: body.github_app,
-		installed: body.installed,
-		account: body.account,
+		installations: (body.installations ?? []).map((i) => ({
+			installationId: i.installation_id,
+			targetType: i.target_type,
+			targetLogin: i.target_login,
+		})),
 		installUrl: body.install_url,
 	};
 }
@@ -303,10 +315,12 @@ export type GithubRepo = {
 
 export async function fetchGithubRepos(
 	credential: string,
+	installationId: string,
 ): Promise<GithubRepo[]> {
-	const res = await fetch(`${relayUrl()}/v1/github/repos`, {
-		headers: { Authorization: `Bearer ${credential}` },
-	});
+	const res = await fetch(
+		`${relayUrl()}/v1/github/repos?installation_id=${encodeURIComponent(installationId)}`,
+		{ headers: { Authorization: `Bearer ${credential}` } },
+	);
 	if (res.status === 401) {
 		throw new RelayAuthError("relay rejected the session credential");
 	}

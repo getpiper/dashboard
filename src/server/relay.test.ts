@@ -601,8 +601,13 @@ test("fetchGithubStatus maps the status envelope to camelCase", async () => {
 		seenAuth = new Headers(init?.headers).get("Authorization");
 		return Response.json({
 			github_app: true,
-			installed: true,
-			account: "octo",
+			installations: [
+				{
+					installation_id: "148353616",
+					target_type: "org",
+					target_login: "getpiper",
+				},
+			],
 			install_url: "https://github.com/apps/piper/installations/new",
 		});
 	}) as typeof fetch;
@@ -612,8 +617,13 @@ test("fetchGithubStatus maps the status envelope to camelCase", async () => {
 	expect<string | null>(seenAuth).toBe("Bearer cred-1");
 	expect(status).toEqual({
 		githubApp: true,
-		installed: true,
-		account: "octo",
+		installations: [
+			{
+				installationId: "148353616",
+				targetType: "org",
+				targetLogin: "getpiper",
+			},
+		],
 		installUrl: "https://github.com/apps/piper/installations/new",
 	});
 });
@@ -646,8 +656,10 @@ test("fetchGithubRepos maps the repos envelope to GithubRepo[]", async () => {
 		});
 	}) as typeof fetch;
 
-	const repos = await fetchGithubRepos("cred-1");
-	expect(seenUrl).toBe("https://relay.test/v1/github/repos");
+	const repos = await fetchGithubRepos("cred-1", "148353616");
+	expect(seenUrl).toBe(
+		"https://relay.test/v1/github/repos?installation_id=148353616",
+	);
 	expect(repos).toEqual([
 		{
 			fullName: "octo/api",
@@ -665,7 +677,7 @@ test("fetchGithubRepos maps the repos envelope to GithubRepo[]", async () => {
 test("fetchGithubRepos raises RelayAuthError on 401", async () => {
 	globalThis.fetch = (async () =>
 		new Response("nope", { status: 401 })) as unknown as typeof fetch;
-	await expect(fetchGithubRepos("cred-1")).rejects.toBeInstanceOf(
+	await expect(fetchGithubRepos("cred-1", "148353616")).rejects.toBeInstanceOf(
 		RelayAuthError,
 	);
 });
