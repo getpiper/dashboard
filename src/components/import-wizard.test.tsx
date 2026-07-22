@@ -27,8 +27,7 @@ const boxes = [
 
 const byoStatus = {
 	githubApp: false,
-	installed: false,
-	account: "",
+	installations: [],
 	installUrl: "",
 };
 
@@ -203,8 +202,9 @@ test("a failed create shows an inline error and stays on the Create step", async
 
 const brokeredInstalled = {
 	githubApp: true,
-	installed: true,
-	account: "octo",
+	installations: [
+		{ installationId: "55", targetType: "user", targetLogin: "octo" },
+	],
 	installUrl: "https://github.com/apps/piper/installations/new",
 };
 
@@ -235,7 +235,7 @@ test("brokered + installed: shows the installed account and no manifest form", a
 test("brokered + not installed: Authorize & install navigates to the install URL", async () => {
 	const navigateTo = mock(() => {});
 	await renderWizard({
-		status: { ...brokeredInstalled, installed: false },
+		status: { ...brokeredInstalled, installations: [] },
 		navigateTo,
 	});
 	fireEvent.click(
@@ -256,6 +256,8 @@ test("brokered: picking a repo auto-fills the app name and links it", async () =
 	});
 	// Connect → Create
 	fireEvent.click(await screen.findByRole("button", { name: /continue/i }));
+	// Repos are drawn from the sole installation.
+	expect(getRepos).toHaveBeenCalledWith("55");
 	// Open the repo picker and choose one.
 	fireEvent.click(
 		await screen.findByRole("button", { name: /select a repository/i }),
@@ -303,4 +305,43 @@ test("brokered: the Advanced root directory is passed through as rootDir", async
 		port: undefined,
 		rootDir: "apps/web",
 	});
+});
+
+test("brokered + multiple installations: the chosen installation's repos load", async () => {
+	const getRepos = mock(async () => repos);
+	await renderWizard({
+		status: {
+			githubApp: true,
+			installUrl: "https://github.com/apps/piper/installations/new",
+			installations: [
+				{ installationId: "1", targetType: "user", targetLogin: "octo" },
+				{ installationId: "2", targetType: "org", targetLogin: "getpiper" },
+			],
+		},
+		getRepos,
+	});
+	// No installation preselected → Continue is disabled until one is chosen.
+	expect(
+		(screen.getByRole("button", { name: /continue/i }) as HTMLButtonElement)
+			.disabled,
+	).toBe(true);
+	// Pick the org installation, then continue to the create step.
+	fireEvent.click(await screen.findByRole("button", { name: /getpiper/i }));
+	fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+	// The chosen installation's repos load and appear in the picker.
+	fireEvent.click(
+		await screen.findByRole("button", { name: /select a repository/i }),
+	);
+	await screen.findByText("octo/api");
+	expect(getRepos).toHaveBeenCalledWith("2");
+});
+
+test("brokered + no installations: does not offer Continue", async () => {
+	await renderWizard({
+		status: { ...brokeredInstalled, installations: [] },
+	});
+	expect(
+		await screen.findByRole("button", { name: /authorize & install/i }),
+	).toBeTruthy();
+	expect(screen.queryByRole("button", { name: /continue/i })).toBeNull();
 });
