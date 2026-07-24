@@ -1,8 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { LandingPage } from "@/components/landing-page";
+import { getSession } from "../server/fns";
 
-// Apps are the landing screen (Vercel-like); boxes live under /boxes.
+// Public marketing landing at /. Authenticated visitors go straight to /apps.
 export const Route = createFileRoute("/")({
-	beforeLoad: () => {
-		throw redirect({ to: "/apps" });
+	staticData: { chrome: false },
+	beforeLoad: async () => {
+		const session = await getSession();
+		if (session) throw redirect({ to: "/apps" });
 	},
+	component: LandingPage,
 });
