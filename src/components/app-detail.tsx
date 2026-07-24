@@ -1,17 +1,11 @@
 import { isRedirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { type DeviceStatus, StatusDot } from "@/components/ui/status-dot";
 import { relativeTime } from "@/lib/relative-time";
 import type { App, AppDomainStatus, Deployment } from "@/server/relay";
 import { StatusPill } from "./status-pill";
-
-const actionBtn =
-	"rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50";
-const primaryBtn =
-	"rounded-[2px] bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50";
-const dangerBtn =
-	"rounded-[2px] bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
 
 export type AppDetailProps = {
 	appName: string;
@@ -213,31 +207,33 @@ function AppActions({
 		<div className="mt-1 flex flex-col gap-2">
 			<div className="flex flex-wrap items-center gap-2">
 				{status === "stopped" ? (
-					<button
+					<Button
 						type="button"
 						onClick={handleStart}
 						disabled={starting}
-						className={primaryBtn}
+						bracketed={false}
 					>
 						{starting ? "Starting…" : "Start"}
-					</button>
+					</Button>
 				) : (
-					<button
+					<Button
 						type="button"
+						variant="neutral"
 						onClick={handleStop}
 						disabled={stopping}
-						className={actionBtn}
+						bracketed={false}
 					>
 						{stopping ? "Stopping…" : "Stop"}
-					</button>
+					</Button>
 				)}
-				<button
+				<Button
 					type="button"
+					variant="neutral"
 					onClick={() => setConfirming(true)}
-					className={actionBtn}
+					bracketed={false}
 				>
 					Delete app
-				</button>
+				</Button>
 			</div>
 
 			{confirming && (
@@ -254,24 +250,26 @@ function AppActions({
 						className={inputClass}
 					/>
 					<div className="flex gap-2">
-						<button
+						<Button
 							type="button"
+							variant="neutral"
 							onClick={() => {
 								setConfirming(false);
 								setTyped("");
 							}}
-							className={actionBtn}
+							bracketed={false}
 						>
 							Cancel
-						</button>
-						<button
+						</Button>
+						<Button
 							type="button"
+							variant="destructive"
 							onClick={handleDelete}
 							disabled={typed !== name || deleting}
-							className={dangerBtn}
+							bracketed={false}
 						>
 							{deleting ? "Deleting…" : "Delete"}
-						</button>
+						</Button>
 					</div>
 				</div>
 			)}
