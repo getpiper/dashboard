@@ -46,9 +46,7 @@ function useCopyToClipboard(resetMs = 1500) {
 	const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const copy = useCallback(
 		(text: string) => {
-			try {
-				navigator.clipboard?.writeText(text);
-			} catch {}
+			navigator.clipboard?.writeText(text).catch(() => {});
 			setCopied(true);
 			clearTimeout(timer.current);
 			timer.current = setTimeout(() => setCopied(false), resetMs);
