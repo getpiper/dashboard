@@ -1,12 +1,8 @@
 import { isRedirect } from "@tanstack/react-router";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import type { OrgMember } from "@/server/relay";
-
-const actionBtn =
-	"rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50";
-const dangerBtn =
-	"rounded-[2px] bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
 
 export type OrgSettingsProps = {
 	slug: string;
@@ -119,36 +115,39 @@ function MembersSection({
 									{role === "owner" && !isSelf && (
 										<div className="flex justify-end gap-2">
 											{m.role === "owner" ? (
-												<button
+												<Button
 													type="button"
+													variant="neutral"
 													disabled={busy || lastOwner}
 													onClick={() =>
 														run(() => onSetRole(m.username, "member"))
 													}
-													className={actionBtn}
+													bracketed={false}
 												>
 													Make member
-												</button>
+												</Button>
 											) : (
-												<button
+												<Button
 													type="button"
+													variant="neutral"
 													disabled={busy}
 													onClick={() =>
 														run(() => onSetRole(m.username, "owner"))
 													}
-													className={actionBtn}
+													bracketed={false}
 												>
 													Make owner
-												</button>
+												</Button>
 											)}
-											<button
+											<Button
 												type="button"
+												variant="neutral"
 												disabled={busy || lastOwner}
 												onClick={() => run(() => onRemoveMember(m.username))}
-												className={actionBtn}
+												bracketed={false}
 											>
 												Remove
-											</button>
+											</Button>
 										</div>
 									)}
 								</td>
@@ -209,14 +208,15 @@ function InvitesSection({
 					onChange={(e) => setValue(e.target.value)}
 					placeholder="octocat"
 				/>
-				<button
+				<Button
 					type="button"
+					variant="neutral"
 					onClick={invite}
 					disabled={busy || value.trim() === ""}
-					className={actionBtn}
+					bracketed={false}
 				>
 					{busy ? "Inviting…" : "Invite"}
-				</button>
+				</Button>
 			</div>
 			{invites.length === 0 ? (
 				<p className="text-muted-foreground text-sm">No pending invites.</p>
@@ -228,13 +228,14 @@ function InvitesSection({
 							className="flex items-center justify-between text-sm"
 						>
 							<span className="font-mono">{login}</span>
-							<button
+							<Button
 								type="button"
+								variant="neutral"
 								onClick={() => revoke(login)}
-								className={actionBtn}
+								bracketed={false}
 							>
 								Revoke
-							</button>
+							</Button>
 						</li>
 					))}
 				</ul>
@@ -295,32 +296,35 @@ function LeaveOrg({
 			{confirming ? (
 				<div className="flex items-center gap-2">
 					<span className="text-sm">Leave this org?</span>
-					<button
+					<Button
 						type="button"
+						variant="neutral"
 						onClick={() => setConfirming(false)}
-						className={actionBtn}
+						bracketed={false}
 					>
 						Cancel
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
+						variant="destructive"
 						onClick={leave}
 						disabled={busy}
-						className={dangerBtn}
+						bracketed={false}
 					>
 						{busy ? "Leaving…" : "Leave"}
-					</button>
+					</Button>
 				</div>
 			) : (
 				<div>
-					<button
+					<Button
 						type="button"
+						variant="neutral"
 						disabled={soleOwner}
 						onClick={() => setConfirming(true)}
-						className={actionBtn}
+						bracketed={false}
 					>
 						Leave org
-					</button>
+					</Button>
 					{soleOwner && (
 						<p className="text-muted-foreground text-sm">
 							You're the only owner — promote someone else first.
@@ -372,36 +376,39 @@ function DeleteOrg({
 						onChange={(e) => setTyped(e.target.value)}
 					/>
 					<div className="flex gap-2">
-						<button
+						<Button
 							type="button"
+							variant="neutral"
 							onClick={() => {
 								setConfirming(false);
 								setTyped("");
 							}}
-							className={actionBtn}
+							bracketed={false}
 						>
 							Cancel
-						</button>
-						<button
+						</Button>
+						<Button
 							type="button"
+							variant="destructive"
 							onClick={del}
 							disabled={typed !== slug || busy}
-							className={dangerBtn}
+							bracketed={false}
 						>
 							{busy ? "Deleting…" : "Delete"}
-						</button>
+						</Button>
 					</div>
 					{error && <p className="text-destructive text-sm">{error}</p>}
 				</div>
 			) : (
 				<div>
-					<button
+					<Button
 						type="button"
+						variant="neutral"
 						onClick={() => setConfirming(true)}
-						className={actionBtn}
+						bracketed={false}
 					>
 						Delete org
-					</button>
+					</Button>
 				</div>
 			)}
 		</div>

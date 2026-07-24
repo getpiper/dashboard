@@ -1,3 +1,6 @@
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 export function LoginCard() {
 	return (
 		<main className="flex min-h-screen flex-col items-center justify-center gap-6">
@@ -9,7 +12,10 @@ export function LoginCard() {
 			</div>
 			<a
 				href="/api/auth/login"
-				className="inline-flex items-center gap-2 rounded-[2px] border border-primary bg-transparent px-5 py-2.5 text-sm font-medium text-primary no-underline"
+				className={cn(
+					buttonVariants({ variant: "secondary", size: "lg" }),
+					"gap-2 px-5 py-2.5 no-underline",
+				)}
 			>
 				Continue with GitHub
 			</a>

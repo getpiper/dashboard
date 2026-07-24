@@ -1,6 +1,7 @@
 import { isRedirect, Link } from "@tanstack/react-router";
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
@@ -62,11 +63,6 @@ const STEPS: { key: Exclude<Step, "exchanging">; label: string }[] = [
 	{ key: "create", label: "Create app" },
 	{ key: "push", label: "Deploy" },
 ];
-
-const primaryBtn =
-	"self-start rounded-[2px] bg-primary px-4 py-2 text-primary-foreground text-sm hover:bg-primary/90";
-const actionBtn =
-	"rounded-[2px] border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50";
 
 function stepIndex(step: Step): number {
 	if (step === "exchanging") return 0;
@@ -201,7 +197,11 @@ function PushPanel({ base, appName }: { base: string; appName: string }) {
 			<Link
 				to="/boxes/$base/apps/$app"
 				params={{ base, app: appName }}
-				className={primaryBtn}
+				className={buttonVariants({
+					variant: "primary",
+					size: "lg",
+					className: "self-start",
+				})}
 			>
 				View app →
 			</Link>
@@ -500,18 +500,16 @@ export function ImportWizard({
 										</div>
 									)}
 									<div className="flex items-center gap-2">
-										<button
+										<Button
 											type="button"
+											size="lg"
 											onClick={() => setStep("create")}
 											disabled={!selectedInstallation}
-											className={`${primaryBtn} ${
-												selectedInstallation
-													? ""
-													: "cursor-not-allowed opacity-50"
-											}`}
+											bracketed={false}
+											className="self-start"
 										>
 											Continue
-										</button>
+										</Button>
 										<a
 											href={status.installUrl}
 											className="text-muted-foreground text-sm underline"
@@ -526,13 +524,15 @@ export function ImportWizard({
 										You'll be sent to GitHub to authorize Piper and choose
 										repositories, then returned here.
 									</p>
-									<button
+									<Button
 										type="button"
+										size="lg"
 										onClick={() => navigateTo(status.installUrl)}
-										className={primaryBtn}
+										bracketed={false}
+										className="self-start"
 									>
 										Authorize &amp; install
-									</button>
+									</Button>
 								</>
 							)}
 						</Panel>
@@ -607,9 +607,14 @@ export function ImportWizard({
 												</div>
 											)}
 										</div>
-										<button type="submit" className={primaryBtn}>
+										<Button
+											type="submit"
+											size="lg"
+											bracketed={false}
+											className="self-start"
+										>
 											Create &amp; link
-										</button>
+										</Button>
 									</>
 								)}
 							</form>
@@ -637,20 +642,23 @@ export function ImportWizard({
 								/>
 							</Field>
 							<div className="flex items-center gap-2">
-								<button
+								<Button
 									type="button"
+									size="lg"
 									onClick={onConnect}
-									className={primaryBtn}
+									bracketed={false}
+									className="self-start"
 								>
 									Connect GitHub
-								</button>
-								<button
+								</Button>
+								<Button
 									type="button"
+									variant="neutral"
 									onClick={() => setStep("create")}
-									className={actionBtn}
+									bracketed={false}
 								>
 									Skip — already connected
-								</button>
+								</Button>
 							</div>
 							<a
 								href="https://github.com/settings/installations"
@@ -697,9 +705,14 @@ export function ImportWizard({
 										<Input name="port" inputMode="numeric" placeholder="8080" />
 									</Field>
 								</div>
-								<button type="submit" className={primaryBtn}>
+								<Button
+									type="submit"
+									size="lg"
+									bracketed={false}
+									className="self-start"
+								>
 									Create &amp; link
-								</button>
+								</Button>
 							</form>
 						</Panel>
 					)}
