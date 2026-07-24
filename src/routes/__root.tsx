@@ -4,6 +4,7 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
+	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { AppFrame } from "../components/app-frame";
@@ -11,6 +12,13 @@ import { OrgScopeProvider } from "../components/org-scope";
 import { getInvites, getOrgs, getSession } from "../server/fns";
 
 import appCss from "../styles.css?url";
+
+declare module "@tanstack/react-router" {
+	interface StaticDataRouteOption {
+		// When false, RootLayout renders the route full-bleed without the app shell.
+		chrome?: boolean;
+	}
+}
 
 export const Route = createRootRoute({
 	head: () => ({
@@ -45,15 +53,22 @@ export const Route = createRootRoute({
 
 function RootLayout() {
 	const data = Route.useLoaderData();
+	const chromeless = useRouterState({
+		select: (s) => s.matches.some((m) => m.staticData.chrome === false),
+	});
 	return (
 		<OrgScopeProvider
 			username={data?.username ?? null}
 			orgs={data?.orgs ?? []}
 			invites={data?.invites ?? []}
 		>
-			<AppFrame>
+			{chromeless ? (
 				<Outlet />
-			</AppFrame>
+			) : (
+				<AppFrame>
+					<Outlet />
+				</AppFrame>
+			)}
 		</OrgScopeProvider>
 	);
 }
